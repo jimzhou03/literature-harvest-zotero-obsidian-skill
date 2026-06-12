@@ -191,6 +191,7 @@ def build_plan(args: argparse.Namespace) -> dict[str, object]:
         "sources": source_plan(venues, terms),
         "zotero": {
             "collection": f"Literature Harvest/{today}/{topic_slug}",
+            "web_api_import_command": f'python <skill-dir>/scripts/zotero_web_import.py --manifest tmp/literature-harvest/{today}-{topic_slug}/manifest.json --collection "Literature Harvest/{today}/{topic_slug}" --note-root wiki/sources/论文阅读/{topic_slug} --map "wiki/maps/{topic_slug} Literature Map.md" --pdf-mode imported-url --update',
             "preflight_command": f'python <skill-dir>/scripts/zotero_preflight.py --expected-name "{topic_slug}" --json',
             "import_status": "not_started",
             "dedupe_keys": ["doi", "arxiv_id", "acl_id", "openreview_forum_id", "normalized_title"],

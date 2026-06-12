@@ -33,9 +33,11 @@
 - `SKILL.md`：Codex skill 入口，包含触发词、工作流、边界和输出纪律。
 - `scripts/build_literature_plan.py`：根据关键词、会议、年份生成检索计划。
 - `scripts/harvest_arxiv.py`：arXiv MVP 抓取器，可以查询 arXiv、过滤候选、下载开放 PDF、生成 BibTeX 和 manifest。
+- `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 Obsidian。
 - `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
 - `references/obsidian-output.md`：定义 Obsidian 笔记、topic map 和日志格式。
+- `references/zotero-web-api.md`：定义 Zotero Web API 全自动导入、credential 处理和 attachment 模式。
 - `references/zotero-workflow.md`：定义 Zotero selected-target 预检、暂停导入和恢复流程。
 - `agents/openai.yaml`：Codex UI 元数据。
 
@@ -46,7 +48,7 @@
 - 不编造缺失的 DOI、BibTeX key、venue、PDF URL、数据集、代码链接或论文贡献。
 - arXiv 已有可执行脚本；ACL / EMNLP / CCL 等来源目前通过 skill 里的 source policy 指导 Codex 使用官方页面/API 检索，后续可以继续补成独立脚本。
 - 大批量任务默认先做候选筛选，不默认深读每一篇。
-- 写入 Zotero 属于库写操作：必须先检查当前 Zotero 选中的库/collection；目标不匹配时只生成待导入产物，不导入。
+- 写入 Zotero 属于库写操作。全自动模式优先使用 Zotero Web API 和 `ZOTERO_API_KEY` 自动创建 collection / 导入 item；没有 API key 时才退回本地 Connector selected-target 预检。
 
 ## 安装方式
 
@@ -104,6 +106,30 @@ python -B C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\script
 
 ### 3. 导入 Zotero
 
+#### 全自动模式：Zotero Web API
+
+一次性准备：创建一个有写权限的 Zotero API key，并在 Codex 运行环境中设置：
+
+```powershell
+$env:ZOTERO_API_KEY = "<key>"
+```
+
+然后让 Codex 执行：
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\zotero_web_import.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --collection "Literature Harvest\<date>\<topic>" `
+  --note-root wiki\sources\论文阅读\<topic> `
+  --map "wiki\maps\<topic> Literature Map.md" `
+  --pdf-mode imported-url `
+  --update
+```
+
+这个模式会自动创建 collection、导入文献 item、添加 PDF attachment，并回填 manifest / Obsidian 笔记。`--pdf-mode upload-file --fallback-url-attachment` 会尝试上传本地 PDF 到 Zotero File Storage，失败时回退为 PDF URL attachment。
+
+#### Fallback：本地 Zotero Connector
+
 建议让 Codex 使用 Zotero skill 执行：
 
 1. 先运行 Zotero 状态检查：`status --json`。
@@ -121,7 +147,7 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
 6. 只附加从开放来源下载成功的 PDF。
 7. 在 Obsidian 笔记中记录 Zotero item key 和 BibTeX key。
 
-说明：Zotero Connector 的 BibTeX/RIS 导入会写入“当前选中的”库或 collection。这个 skill 不能替 Zotero 自动创建/切换 collection，因此必须先做 selected-target 预检。
+说明：Zotero Connector 的 BibTeX/RIS 导入会写入“当前选中的”库或 collection。只有 Web API 模式能自动创建/选择目标 collection；Connector fallback 必须先做 selected-target 预检。
 
 ### 4. 写入 Obsidian
 
@@ -157,6 +183,7 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 - `build_literature_plan.py` 可以运行，并能把 `EINLP` 归一化为 `EMNLP`。
 - `harvest_arxiv.py --help` 可以从全局 Codex skill 路径正常调用。
 - `zotero_preflight.py --help` 可以运行，用于导入前检查 selected collection。
+- `zotero_web_import.py --help` 可以运行；实际写入需要 `ZOTERO_API_KEY`。
 - 直接下载 arXiv PDF 的 smoke test 成功，文件头为 `%PDF-`。
 - 启动 Zotero 后，本地 API 可达，测试环境中识别到 Zotero `9.0.5`、API v3。
 
@@ -164,7 +191,7 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 
 - arXiv API 在频繁请求时可能超时或返回 HTTP 429。遇到这种情况应减小批量、增加 delay、稍后重试。
 - 目前只有 arXiv 抓取器是脚本化 MVP；ACL / EMNLP / CCL 等来源还需要继续补充专用抓取脚本。
-- Zotero collection 仍需要用户在 Zotero UI 中先选中或创建；skill 负责检测和阻止错误导入。
+- 无 `ZOTERO_API_KEY` 时，Zotero collection 仍需要用户在 Zotero UI 中先选中或创建；skill 负责检测和阻止错误导入。
 
 ## 许可证
 

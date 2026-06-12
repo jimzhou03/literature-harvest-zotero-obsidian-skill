@@ -35,6 +35,12 @@ python <skill-dir>/scripts/zotero_preflight.py --expected-name "rag-kg" --json
 
 If the selected Zotero collection does not match the intended run, stop before import, preserve the generated BibTeX/PDF/Obsidian artifacts, and ask the user to select or create the correct collection.
 
+For full automation without manual Zotero Desktop collection selection, prefer Zotero Web API mode when `ZOTERO_API_KEY` is available:
+
+```bash
+python <skill-dir>/scripts/zotero_web_import.py --manifest tmp/literature-harvest/rag-kg/manifest.json --collection "Literature Harvest/<date>/rag-kg" --note-root wiki/sources/论文阅读/rag-kg --map "wiki/maps/rag-kg Literature Map.md" --pdf-mode imported-url --update
+```
+
 ## Workflow
 
 1. Parse scope.
@@ -45,7 +51,8 @@ If the selected Zotero collection does not match the intended run, stop before i
 2. Build a source plan.
    - Run `scripts/build_literature_plan.py` for a deterministic query plan.
    - Read `references/source-policy.md` before fetching from venues or journals.
-   - If the user requested Zotero writes, read `references/zotero-workflow.md` and plan the target collection before download/import.
+   - If the user requested Zotero writes and `ZOTERO_API_KEY` is available, read `references/zotero-web-api.md` and use Web API mode for automatic collection creation/import.
+   - If no `ZOTERO_API_KEY` is available, read `references/zotero-workflow.md` and plan the local Connector selected-target fallback.
    - Prefer official/open routes: arXiv API, ACL Anthology, OpenReview, PMLR, CVF OpenAccess, DBLP, Crossref/OpenAlex/Semantic Scholar metadata, publisher pages, and author/project pages.
    - Do not bypass paywalls, login gates, robots restrictions, or publisher terms. Only download PDFs from clearly open sources.
 
@@ -61,11 +68,10 @@ If the selected Zotero collection does not match the intended run, stop before i
    - If a duplicate exists, update the run manifest and Obsidian links rather than creating another Zotero item.
 
 5. Import into Zotero.
-   - Use the Zotero skill when available. Start with the helper `status --json`.
-   - Run `scripts/zotero_preflight.py --expected-name "<intended collection or topic>" --json` before `import-bibtex` or `import-ris`.
-   - If the selected Zotero target is wrong, do not import. Mark the run as `pending_target_confirmation`, keep the BibTeX/PDF artifacts, write Obsidian notes with `zotero_item_key: "TBD"`, and tell the user how to resume after switching Zotero collections.
-   - If the prompt explicitly says to import/write Zotero and the selected target is correct, proceed with imports after candidate criteria are concrete. Otherwise show the candidate table and ask for confirmation before library writes.
-   - Prefer BibTeX/RIS import for metadata. Attach open PDFs only when the source is open and the file was successfully downloaded.
+   - Preferred full-auto path: use `scripts/zotero_web_import.py` with `ZOTERO_API_KEY`. This creates/reuses the collection path, creates/reuses items, adds collection membership, adds PDF attachments, and updates Obsidian outputs.
+   - Fallback local path: use the Zotero skill when available. Start with `status --json`, then run `scripts/zotero_preflight.py --expected-name "<intended collection or topic>" --json` before `import-bibtex` or `import-ris`.
+   - If the fallback selected Zotero target is wrong, do not import. Mark the run as `pending_target_confirmation`, keep the BibTeX/PDF artifacts, write Obsidian notes with `zotero_item_key: "TBD"`, and tell the user how to resume after switching Zotero collections.
+   - Attach open PDFs only when the source is open and the file was successfully downloaded. In Web API mode, use `--pdf-mode imported-url` by default or `--pdf-mode upload-file --fallback-url-attachment` when the user wants Zotero File Storage upload.
    - Record both Zotero item key and exported BibTeX key; they are not the same identifier.
 
 6. Analyze papers.
@@ -96,3 +102,4 @@ If the selected Zotero collection does not match the intended run, stop before i
 - `references/source-policy.md`: source routing, venue handling, and legal/safety boundaries.
 - `references/obsidian-output.md`: note schema, map schema, and log update format.
 - `references/zotero-workflow.md`: Zotero selected-target preflight, import guardrails, path policy, and resume protocol.
+- `references/zotero-web-api.md`: full-auto Zotero Web API import, collection creation, attachment modes, and credential handling.

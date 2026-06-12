@@ -32,9 +32,11 @@ Use this skill when the user asks Codex to:
 - `SKILL.md`: Codex skill entrypoint with triggers, workflow, boundaries, and output discipline.
 - `scripts/build_literature_plan.py`: deterministic query/source plan builder.
 - `scripts/harvest_arxiv.py`: arXiv MVP harvester that can query arXiv, filter candidates, download open PDFs, and generate BibTeX plus a manifest.
+- `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates Obsidian outputs.
 - `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
 - `references/obsidian-output.md`: Obsidian note, map, and log formats.
+- `references/zotero-web-api.md`: full-auto Zotero Web API import, credential handling, and attachment modes.
 - `references/zotero-workflow.md`: Zotero selected-target guardrails, pending-import state, and resume protocol.
 - `agents/openai.yaml`: Codex UI metadata.
 
@@ -45,7 +47,7 @@ Use this skill when the user asks Codex to:
 - It does not fabricate missing DOI, venue, BibTeX key, PDF URL, dataset, code link, or novelty claims.
 - arXiv has a runnable MVP script. ACL / EMNLP / CCL are currently guided by source policy and can be extended with dedicated scripts later.
 - Large batches should be triaged first. Deep-read only selected papers unless the user explicitly asks for exhaustive processing.
-- Zotero writes must be preceded by selected-target validation. If the current Zotero collection is wrong, generate import-ready artifacts but do not import.
+- Zotero writes should use Zotero Web API mode when `ZOTERO_API_KEY` is available, so the skill can create collections and import items automatically. Without an API key, use the local Connector selected-target fallback.
 
 ## Installation
 
@@ -93,6 +95,30 @@ Path policy:
 
 ## Zotero Workflow
 
+### Full Automation: Zotero Web API
+
+One-time setup: create a Zotero API key with write access and expose it to Codex:
+
+```powershell
+$env:ZOTERO_API_KEY = "<key>"
+```
+
+Then run:
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\zotero_web_import.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --collection "Literature Harvest\<date>\<topic>" `
+  --note-root wiki\sources\论文阅读\<topic> `
+  --map "wiki\maps\<topic> Literature Map.md" `
+  --pdf-mode imported-url `
+  --update
+```
+
+This mode creates the collection path, imports/reuses items, adds PDF attachments, and updates the manifest plus Obsidian notes. Use `--pdf-mode upload-file --fallback-url-attachment` to try uploading local PDFs to Zotero File Storage, with URL attachment fallback.
+
+### Fallback: Zotero Connector
+
 Ask Codex to use the Zotero skill after candidate generation:
 
 1. Check Zotero readiness with `status --json`.
@@ -110,7 +136,7 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
 6. Attach only PDFs downloaded from open sources.
 7. Record both Zotero item keys and BibTeX keys in Obsidian notes.
 
-Note: Zotero Connector imports BibTeX/RIS records into the currently selected library or collection. This skill validates that target; it does not create or switch Zotero collections for the user.
+Note: Zotero Connector imports BibTeX/RIS records into the currently selected library or collection. Web API mode is the automated collection-creation path; Connector fallback validates the current selected target and blocks wrong imports.
 
 ## Obsidian Workflow
 
@@ -142,13 +168,14 @@ Validated locally:
 - `build_literature_plan.py` runs and normalizes `EINLP` to `EMNLP`.
 - `harvest_arxiv.py --help` runs from the global Codex skill path.
 - `zotero_preflight.py --help` runs and provides a selected-target guard before import.
+- `zotero_web_import.py --help` runs; actual writes require `ZOTERO_API_KEY`.
 - Direct arXiv PDF download smoke test produced a valid `%PDF-` file.
 - Zotero Desktop local API was reachable after launching Zotero.
 
 Known limitation:
 
 - arXiv API may time out or return HTTP 429 when rate-limited. Use smaller batches, add delays, and retry later.
-- Zotero collections still need to be created or selected in the Zotero UI; the skill detects mismatches and blocks wrong imports.
+- Without `ZOTERO_API_KEY`, Zotero collections still need to be created or selected in the Zotero UI; the skill detects mismatches and blocks wrong imports.
 
 ## License
 
