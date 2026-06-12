@@ -13,8 +13,9 @@ into a repeatable workflow:
 3. Download only clearly open-access PDFs.
 4. Generate `manifest.json` and `references.bib`.
 5. Import metadata and open PDFs into Zotero through Codex's Zotero workflow.
-6. Analyze selected papers with Codex.
-7. Write source-grounded notes and topic maps into an Obsidian vault.
+6. Extract full-text evidence, section hints, method/evaluation/limitation snippets, and figure/table/algorithm references from accessible PDFs.
+7. Use Codex to produce structured paper readings that explain the problem, method, experiments, tools/data/code, limitations, and takeaways.
+8. Write paper notes plus topic-level method/tool/trend/gap synthesis into an Obsidian vault.
 
 ## When To Use
 
@@ -25,6 +26,8 @@ Use this skill when the user asks Codex to:
 - download open PDFs,
 - import references into Zotero,
 - analyze papers and write notes into Obsidian,
+- read papers end to end and dissect methods, experiments, tools, and trends,
+- produce a recent literature review and research-gap map,
 - monitor literature around topics such as RAG, KG, knowledge graphs, neural networks, or LLMs.
 
 ## Current Capabilities
@@ -32,9 +35,11 @@ Use this skill when the user asks Codex to:
 - `SKILL.md`: Codex skill entrypoint with triggers, workflow, boundaries, and output discipline.
 - `scripts/build_literature_plan.py`: deterministic query/source plan builder.
 - `scripts/harvest_arxiv.py`: arXiv MVP harvester that can query arXiv, filter candidates, download open PDFs, and generate BibTeX plus a manifest.
+- `scripts/extract_pdf_evidence.py`: PDF evidence extractor that writes `pdf-evidence.json` and `full_text/` for structured reading.
 - `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates the manifest, Obsidian notes, topic map, and `wiki/log.md`.
 - `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
+- `references/deep-reading-workflow.md`: reading-depth policy, single-paper dissection, topic synthesis, evidence constraints, and human-judgment boundaries.
 - `references/obsidian-output.md`: Obsidian note, map, and log formats.
 - `references/zotero-web-api.md`: full-auto Zotero Web API import, credential handling, and attachment modes.
 - `references/zotero-workflow.md`: Zotero selected-target guardrails, pending-import state, and resume protocol.
@@ -47,6 +52,8 @@ Use this skill when the user asks Codex to:
 - It does not fabricate missing DOI, venue, BibTeX key, PDF URL, dataset, code link, or novelty claims.
 - arXiv has a runnable MVP script. ACL / EMNLP / CCL are currently guided by source policy and can be extended with dedicated scripts later.
 - Large batches should be triaged first. Deep-read only selected papers unless the user explicitly asks for exhaustive processing.
+- When the user asks for full reading, the skill structured-reads accessible PDFs and makes any batch/depth tradeoff explicit.
+- Triage is only title/abstract-level screening. It must not be presented as a completed paper-reading conclusion.
 - Zotero writes should use Zotero Web API mode when `ZOTERO_API_KEY` is available, so the skill can create collections and import items automatically. Without an API key, use the local Connector selected-target fallback.
 
 ## Installation
@@ -58,6 +65,12 @@ git clone https://github.com/jimzhou03/literature-harvest-zotero-obsidian-skill.
 ```
 
 Restart Codex or start a new thread after installation if the skill is not visible immediately.
+
+PDF evidence extraction requires the lightweight `pypdf` dependency:
+
+```powershell
+python -m pip install --user pypdf
+```
 
 ## Example Usage
 
@@ -161,6 +174,25 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
 
 Note: Zotero Connector imports BibTeX/RIS records into the currently selected library or collection. Web API mode is the automated collection-creation path; Connector fallback validates the current selected target and blocks wrong imports.
 
+## PDF Evidence Extraction
+
+After PDFs are downloaded or Zotero items have open PDF attachments, extract evidence before writing final notes:
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\extract_pdf_evidence.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --write-text `
+  --update
+```
+
+Outputs:
+
+- `pdf-evidence.json`: page count, character count, section hints, problem/method/evaluation/limitation snippets, and figure/table/algorithm references.
+- `full_text/*.txt`: page-marked extracted full text.
+- Manifest fields such as `full_text_status`, `full_text_chars`, `full_text_path`, and `pdf_evidence_path`.
+
+This is an evidence index, not a final judgment. Codex should still inspect the evidence or original paper before making claims.
+
 ## Obsidian Workflow
 
 Default output paths:
@@ -171,6 +203,19 @@ wiki/maps/<topic-slug> Literature Map.md
 wiki/log.md
 tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 ```
+
+Paper notes should not default to one or two sentences. For `structured-read` and `deep-read` notes, include:
+
+- Research question and boundary
+- Motivation / basic idea
+- Method mechanism
+- Evaluation, dataset, metrics, baselines, and ablations
+- Key artifacts: figures, tables, equations, algorithms, definitions
+- Tools / Data / Code
+- Strengths / Limitations / My Takeaways
+- Reading confidence and manual verification questions
+
+Topic maps should include method taxonomy, tool/data/code matrix, trend timeline, paper relationships, research gaps, and recommended reading order.
 
 Use `需要人工复核` for metadata-only or weakly extracted notes.
 
@@ -184,12 +229,17 @@ Use the literature-harvest-zotero-obsidian skill to fetch 2024-2026 RAG and KG p
 Use the literature-harvest-zotero-obsidian skill to import the confirmed candidates into Zotero, attach open PDFs, and write deep-reading notes for the top 5 papers into Obsidian.
 ```
 
+```text
+Use the literature-harvest-zotero-obsidian skill to fetch popular Text-to-SQL papers from the last three years, import them into Zotero, then structured-read accessible PDFs. In Obsidian, do not write only summaries; dissect research questions, methods, experiments, tools/data/code, trends, and gaps.
+```
+
 ## Local Validation
 
 Validated locally:
 
 - `build_literature_plan.py` runs and normalizes `EINLP` to `EMNLP`.
 - `harvest_arxiv.py --help` runs from the global Codex skill path.
+- `extract_pdf_evidence.py --help` runs and supports full-text evidence extraction for downloaded PDFs.
 - `zotero_preflight.py --help` runs and provides a selected-target guard before import.
 - `zotero_web_import.py --help` runs; actual writes require `ZOTERO_API_KEY`.
 - Direct arXiv PDF download smoke test produced a valid `%PDF-` file.

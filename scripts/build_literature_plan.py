@@ -187,6 +187,21 @@ def build_plan(args: argparse.Namespace) -> dict[str, object]:
             "max_papers": args.max_papers,
             "deep_read": args.deep_read,
         },
+        "reading": {
+            "default_depth": args.reading_depth,
+            "policy": "triage all candidates, extract PDF evidence for accessible papers, structured-read/deep-read the selected set",
+            "pdf_evidence_command": f"python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-harvest/{today}-{topic_slug}/manifest.json --write-text --update",
+            "required_outputs": [
+                "problem solved",
+                "method mechanism",
+                "evaluation support",
+                "key artifacts",
+                "tools/data/code",
+                "method taxonomy",
+                "trend timeline",
+                "research gaps",
+            ],
+        },
         "warnings": warnings,
         "sources": source_plan(venues, terms),
         "zotero": {
@@ -212,6 +227,12 @@ def main() -> int:
     parser.add_argument("--years", default="", help="Year or range such as 2023:2026.")
     parser.add_argument("--max-papers", type=int, default=20)
     parser.add_argument("--deep-read", type=int, default=5)
+    parser.add_argument(
+        "--reading-depth",
+        choices=["triage", "structured-read", "deep-read"],
+        default="structured-read",
+        help="Default depth for selected accessible PDFs.",
+    )
     parser.add_argument("--topic", default="")
     parser.add_argument("--out", default="", help="Optional JSON output path.")
     parser.add_argument("--unicode", action="store_true", help="Emit unescaped Unicode in JSON output.")

@@ -426,13 +426,18 @@ def update_log(path: Path, manifest: dict[str, Any]) -> None:
     attached = manifest.get("zotero_pdf_attached_count", 0)
     analysis = manifest.get("analysis_summary", {})
     deep_read = analysis.get("pdf_assisted_deep_read", 0)
+    full_text_extracted = manifest.get("pdf_evidence_summary", {}).get("ok", 0)
+    structured_read = sum(
+        1 for item in items if item.get("analysis_status") in {"structured-read", "deep-read"}
+    )
     collection = manifest.get("zotero_collection", "")
     collection_key = manifest.get("zotero_collection_key", "")
     mode = manifest.get("zotero_pdf_attachment_mode", "unknown")
     counts = (
         f"- Counts: found={len(items)}, unique={len(items)}, imported={imported}, "
-        f"zotero_pending=0, pdf_attached={attached}, notes={len(items)}, "
-        f"pdf_assisted_deep_read={deep_read}, review_required={len(items)}"
+        f"zotero_pending=0, pdf_attached={attached}, full_text_extracted={full_text_extracted}, "
+        f"structured_read={structured_read}, deep_read={deep_read}, notes={len(items)}, "
+        f"review_required={len(items)}"
     )
     notes = (
         f"- Notes: Zotero Web API 已导入 collection `{collection}` (`{collection_key}`)；"

@@ -14,7 +14,7 @@ Use YAML frontmatter:
 ```yaml
 ---
 type: paper-note
-status: deep-read | triage | metadata-only
+status: deep-read | structured-read | triage | metadata-only
 topic: "<topic>"
 title: "<paper title>"
 year: 2026
@@ -26,6 +26,9 @@ arxiv_id: "<arXiv ID or TBD>"
 source_url: "<landing page URL>"
 pdf_url: "<open PDF URL or TBD>"
 pdf_path: "<local path or TBD>"
+full_text_status: "ok | missing_pdf | extract_failed | TBD"
+full_text_path: "<relative extracted text path or TBD>"
+reading_confidence: "high | medium | low"
 review_required: true
 created: "YYYY-MM-DD"
 ---
@@ -36,16 +39,33 @@ Recommended sections:
 - `# <Title>`
 - `## Source`
 - `## TL;DR`
+- `## Research Question`
 - `## Relevance To Query`
 - `## Motivation And Basic Idea`
+- `## Background / Gap`
 - `## Method`
 - `## Evaluation`
+- `## Key Artifacts`
+- `## Tools / Data / Code`
 - `## Strengths`
 - `## Limitations`
 - `## My Takeaways`
+- `## Related Papers`
+- `## Open Questions`
 - `## Links`
 
-For abstract-only notes, use `status: triage` and write `需要人工复核` near the top.
+For `structured-read` or `deep-read` notes, fill every section. If a section does not apply, write `N/A` or `TBD` with a reason. The note must answer:
+
+- What problem does the paper solve?
+- Why was that problem not already handled by prior practice?
+- What is the core idea?
+- How does the method actually work?
+- What datasets, tools, models, prompts, code, or systems are used?
+- What do the experiments prove, and what do they not prove?
+- Which figures, tables, algorithms, equations, or definitions carry the main claims?
+- What are the limitations and reusable takeaways?
+
+For abstract-only notes, use `status: triage`, write `需要人工复核` near the top, and do not present the note as a completed reading.
 
 ## Topic Map Schema
 
@@ -55,6 +75,13 @@ The map page should include:
 - Source scope and date range.
 - Ranking table with links to paper notes.
 - Imported Zotero collection/key summary.
+- Full-text extraction and reading-depth counts.
+- Method taxonomy: group papers by method family and problem setting.
+- Tool/data/code matrix: datasets, benchmarks, code, models, prompts, systems, and reproducibility notes.
+- Trend timeline: how methods, assumptions, datasets, and evaluation changed over time.
+- Paper relationship graph in prose: baseline, extension, benchmark, critique, system application, or follow-up.
+- Research gaps and unresolved questions.
+- Recommended reading order.
 - Open questions and manual-review queue.
 
 ## Log Entry
@@ -66,7 +93,7 @@ Append to `wiki/log.md`:
 
 - Query: <raw user query>
 - Sources: <source list>
-- Counts: found=<n>, unique=<n>, imported=<n>, pdf_attached=<n>, notes=<n>, review_required=<n>
+- Counts: found=<n>, unique=<n>, imported=<n>, pdf_attached=<n>, full_text_extracted=<n>, structured_read=<n>, deep_read=<n>, notes=<n>, review_required=<n>
 - Outputs: [[<topic-slug> Literature Map]]
 - Notes: <blocked sources, missing PDFs, or uncertainty>
 ```

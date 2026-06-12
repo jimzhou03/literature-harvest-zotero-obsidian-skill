@@ -1,4 +1,4 @@
 interface:
   display_name: "Literature Harvest to Zotero and Obsidian"
-  short_description: "Fully automate literature harvest into Zotero and Obsidian"
-  default_prompt: "Use $literature-harvest-zotero-obsidian to fetch recent RAG and KG papers, import them into Zotero via Web API when available, and write analysis notes to Obsidian."
+  short_description: "Harvest, read, and review papers into Zotero and Obsidian"
+  default_prompt: "Use $literature-harvest-zotero-obsidian to fetch recent RAG and KG papers, import them into Zotero via Web API when available, extract PDF evidence, and write structured reading plus review notes to Obsidian."

@@ -13,8 +13,9 @@
 3. 只下载明确开放访问的 PDF。
 4. 生成 `manifest.json` 和 `references.bib`，用于追踪来源和导入 Zotero。
 5. 通过 Codex 的 Zotero 工作流把元数据和开放 PDF 写入 Zotero。
-6. 通过 Codex 分析选中的论文内容。
-7. 把来源明确、带复核标记的中文文献笔记写入 Obsidian vault。
+6. 对可访问 PDF 提取全文证据、章节线索、方法/实验/局限片段和关键图表算法引用。
+7. 通过 Codex 对选中论文做结构化阅读，回答“解决什么问题、用了什么方法、实验证明什么、工具/数据/代码是什么、局限在哪里”。
+8. 把单篇阅读笔记和主题级方法/工具/趋势/研究 gap 综述写入 Obsidian vault。
 
 ## 适用场景
 
@@ -24,6 +25,8 @@
 - “爬取 KG / 知识图谱相关 ACL、EMNLP、CCL 论文”
 - “下载神经网络相关论文 PDF 并导入 Zotero”
 - “检索顶会顶刊文献，分析后写进 Obsidian”
+- “从头到尾读这些论文，拆解方法、实验、工具和趋势”
+- “给我做这个方向近三年的文献综述和研究 gap”
 - “监控某个关键词的新论文，先给我候选清单”
 
 它特别适合长期维护一个“Zotero 负责引用管理 + Obsidian 负责研究笔记”的文献工作流。
@@ -33,9 +36,11 @@
 - `SKILL.md`：Codex skill 入口，包含触发词、工作流、边界和输出纪律。
 - `scripts/build_literature_plan.py`：根据关键词、会议、年份生成检索计划。
 - `scripts/harvest_arxiv.py`：arXiv MVP 抓取器，可以查询 arXiv、过滤候选、下载开放 PDF、生成 BibTeX 和 manifest。
+- `scripts/extract_pdf_evidence.py`：PDF 全文证据提取器，可生成 `pdf-evidence.json` 和 `full_text/`，供后续结构化阅读使用。
 - `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 manifest、Obsidian 笔记、topic map 和 `wiki/log.md`。
 - `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
+- `references/deep-reading-workflow.md`：定义阅读深度、单篇拆解、主题综述、证据约束和人工判断边界。
 - `references/obsidian-output.md`：定义 Obsidian 笔记、topic map 和日志格式。
 - `references/zotero-web-api.md`：定义 Zotero Web API 全自动导入、credential 处理和 attachment 模式。
 - `references/zotero-workflow.md`：定义 Zotero selected-target 预检、暂停导入和恢复流程。
@@ -47,7 +52,8 @@
 - 不从 ACM、IEEE、Springer、Elsevier 等页面批量强行下载 PDF。
 - 不编造缺失的 DOI、BibTeX key、venue、PDF URL、数据集、代码链接或论文贡献。
 - arXiv 已有可执行脚本；ACL / EMNLP / CCL 等来源目前通过 skill 里的 source policy 指导 Codex 使用官方页面/API 检索，后续可以继续补成独立脚本。
-- 大批量任务默认先做候选筛选，不默认深读每一篇。
+- 大批量任务默认先做候选筛选，不默认深读每一篇；但用户明确要求“精读 / 从头到尾 / 完整分析”时，会对可访问 PDF 做结构化阅读，并在数量过大时明确说明深度与批量的取舍。
+- triage 只代表标题/摘要层面的初筛，不能当成最终读文献结论。
 - 写入 Zotero 属于库写操作。全自动模式优先使用 Zotero Web API 和 `ZOTERO_API_KEY` 自动创建 collection / 导入 item；没有 API key 时才退回本地 Connector selected-target 预检。
 
 ## 安装方式
@@ -61,6 +67,12 @@ git clone https://github.com/jimzhou03/literature-harvest-zotero-obsidian-skill.
 如果你已经有同名目录，可以先备份或删除旧目录后再克隆。
 
 安装后建议重启 Codex，或开一个新线程，确保新的 skill 被重新发现。
+
+PDF 全文证据提取需要轻量依赖 `pypdf`：
+
+```powershell
+python -m pip install --user pypdf
+```
 
 ## 使用示例
 
@@ -172,7 +184,26 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
 
 说明：Zotero Connector 的 BibTeX/RIS 导入会写入“当前选中的”库或 collection。只有 Web API 模式能自动创建/选择目标 collection；Connector fallback 必须先做 selected-target 预检。
 
-### 4. 写入 Obsidian
+### 4. 提取 PDF 全文证据
+
+导入或下载 PDF 后，先提取全文证据，而不是直接写一句话总结：
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\extract_pdf_evidence.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --write-text `
+  --update
+```
+
+输出包括：
+
+- `pdf-evidence.json`：页数、字符数、章节线索、问题/方法/实验/局限片段、图/表/算法引用。
+- `full_text/*.txt`：带页码标记的全文抽取结果。
+- `manifest.json` 回填：`full_text_status`、`full_text_chars`、`full_text_path`、`pdf_evidence_path`。
+
+这一步只是证据索引，不替你下最终判断。Codex 后续写笔记时必须回到这些证据或原文。
+
+### 5. 写入 Obsidian
 
 默认写入结构：
 
@@ -182,6 +213,19 @@ wiki/maps/<topic-slug> Literature Map.md
 wiki/log.md
 tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 ```
+
+单篇笔记默认不再只写一两句话，而是包含：
+
+- 研究问题和边界
+- Motivation / Basic Idea
+- Method 机制拆解
+- Evaluation、dataset、metric、baseline、ablation
+- Key Artifacts：关键图、表、公式、算法、定义
+- Tools / Data / Code
+- Strengths / Limitations / My Takeaways
+- Reading Confidence 和需要人工复核的问题
+
+主题地图必须包含方法分类、工具/数据/代码矩阵、趋势时间线、论文关系、研究 gap 和推荐阅读顺序。
 
 如果只基于标题/摘要判断，要在笔记中标注：
 
@@ -199,12 +243,17 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 使用 literature-harvest-zotero-obsidian skill，把上一步确认的候选论文导入 Zotero，能下载 PDF 的附上 PDF，然后把前 5 篇深读结果写入 Obsidian。
 ```
 
+```text
+使用 literature-harvest-zotero-obsidian skill，抓取近三年 Text-to-SQL 热门论文，导入 Zotero 后对可访问 PDF 做 structured-read。Obsidian 里不要只写摘要，要拆解研究问题、方法、实验、工具/数据/代码、趋势和 gap。
+```
+
 ## 本地验证状态
 
 已验证：
 
 - `build_literature_plan.py` 可以运行，并能把 `EINLP` 归一化为 `EMNLP`。
 - `harvest_arxiv.py --help` 可以从全局 Codex skill 路径正常调用。
+- `extract_pdf_evidence.py --help` 可以运行，用于对已下载 PDF 提取全文证据。
 - `zotero_preflight.py --help` 可以运行，用于导入前检查 selected collection。
 - `zotero_web_import.py --help` 可以运行；实际写入需要 `ZOTERO_API_KEY`。
 - 直接下载 arXiv PDF 的 smoke test 成功，文件头为 `%PDF-`。

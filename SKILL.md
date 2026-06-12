@@ -1,15 +1,17 @@
 ---
 name: literature-harvest-zotero-obsidian
-description: Harvest academic papers from open sources into Zotero and Obsidian. Use when the user asks to 抓取, 爬取, 检索, 监控, 批量导入, 下载 PDF, 写入 Zotero, 写入 Obsidian, or analyze literature for keywords/topics such as RAG, KG, knowledge graph, neural network, LLM, ACL, EMNLP/EINLP, CCL, arXiv, top conferences, or top journals.
+description: Harvest academic papers from open sources into Zotero and Obsidian, then read PDFs into structured research notes and topic-level synthesis. Use when the user asks to 抓取, 爬取, 检索, 监控, 批量导入, 下载 PDF, 写入 Zotero, 写入 Obsidian, 精读, 从头到尾读论文, 拆解方法/实验/工具/趋势, 做文献综述, or analyze literature for keywords/topics such as RAG, KG, knowledge graph, neural network, LLM, ACL, EMNLP/EINLP, CCL, arXiv, top conferences, or top journals.
 ---
 
 # Literature Harvest to Zotero and Obsidian
 
 ## Overview
 
-Use this skill to turn a topic request into a controlled literature-ingestion run: find candidate papers from open academic sources, deduplicate them, import metadata and open PDFs into Zotero, analyze selected papers, and write source-grounded notes into this Obsidian vault.
+Use this skill to turn a topic request into a controlled literature-reading run: find candidate papers from open academic sources, deduplicate them, import metadata and open PDFs into Zotero, extract full-text evidence from accessible PDFs, write structured paper notes, and synthesize methods, tools, trends, and gaps into this Obsidian vault.
 
 Respect the vault rules: preserve sources, avoid unsupported claims, mark weak extraction as `需要人工复核`, maintain Obsidian links, and update `wiki/log.md` after batch writes.
+
+This is not a "one paragraph summary" skill. Default to making the reading process visible: what problem the paper solves, how the method works, what experiments support it, what artifacts matter, and what remains uncertain. Use short abstract-only notes only as triage, not as final reading output.
 
 ## Quick Start
 
@@ -41,12 +43,19 @@ For full automation without manual Zotero Desktop collection selection, prefer Z
 python <skill-dir>/scripts/zotero_web_import.py --manifest tmp/literature-harvest/rag-kg/manifest.json --collection "Literature Harvest/<date>/rag-kg" --note-root wiki/sources/论文阅读/rag-kg --map "wiki/maps/rag-kg Literature Map.md" --pdf-mode imported-url --update
 ```
 
+After PDFs are available, extract full-text evidence before writing final notes:
+
+```bash
+python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-harvest/rag-kg/manifest.json --write-text --update
+```
+
 ## Workflow
 
 1. Parse scope.
-   - Extract topic keywords, synonyms, venues, year range, language preference, max paper count, and whether the user explicitly asked to write Zotero/Obsidian.
+   - Extract topic keywords, synonyms, venues, year range, language preference, max paper count, requested reading depth, and whether the user explicitly asked to write Zotero/Obsidian.
    - Treat `EINLP` as likely `EMNLP`, but mention the correction if it affects source selection.
    - Default to `max-papers=20`, `deep-read=5`, and year range `current year - 3` through current year when the user gives no limits.
+   - If the user says `精读`, `从头到尾`, `完整分析`, or asks what method/experiment/trend proves, treat accessible PDFs as structured-read targets, not abstract-only triage.
 
 2. Build a source plan.
    - Run `scripts/build_literature_plan.py` for a deterministic query plan.
@@ -74,32 +83,44 @@ python <skill-dir>/scripts/zotero_web_import.py --manifest tmp/literature-harves
    - Attach open PDFs only when the source is open and the file was successfully downloaded. In Web API mode, use `--pdf-mode imported-url` by default or `--pdf-mode upload-file --fallback-url-attachment` when the user wants Zotero File Storage upload.
    - Record both Zotero item key and exported BibTeX key; they are not the same identifier.
 
-6. Analyze papers.
-   - For deep analysis, use the `paper-deep-reading` skill when available.
-   - Deep-read open PDFs for the top selected papers. For the rest, write triage notes from metadata/abstract only and label them `需要人工复核`.
-   - Separate paper claims from Codex analysis. Do not infer venue, dataset, code, novelty, or results when absent from the source.
+6. Extract PDF evidence.
+   - Read `references/deep-reading-workflow.md` before writing final reading notes.
+   - Run `scripts/extract_pdf_evidence.py --manifest <manifest> --write-text --update` for accessible PDFs.
+   - Use the generated `pdf-evidence.json` and `full_text/` files as evidence aids, not as final conclusions.
+   - If extraction fails, keep the paper in Zotero, mark the note `metadata-only` or `triage`, and explain the failure.
 
-7. Write Obsidian outputs.
+7. Analyze papers.
+   - For deep analysis, use the `paper-deep-reading` skill when available.
+   - For each structured-read/deep-read paper, do three passes: abstract/introduction/conclusion, method/system/algorithm, then evaluation/artifacts/limitations.
+   - Deep-read open PDFs for the top selected papers by default. If the user explicitly asks for complete reading and the batch is manageable, deep-read every accessible PDF; otherwise triage all and deep-read the agreed top set.
+   - For the rest, write triage notes from metadata/abstract only and label them `需要人工复核`; do not make these look like final paper-reading notes.
+   - Separate paper claims from Codex analysis. Do not infer venue, dataset, code, novelty, or results when absent from the source.
+   - Each final note must answer: solved problem, core idea, method mechanism, experiment setup/results, key artifacts, strengths, limitations, reusable tools/datasets/code, and your concrete takeaways.
+
+8. Write Obsidian outputs.
    - Read `references/obsidian-output.md` before writing notes.
    - Default note root: `wiki/sources/论文阅读/<topic-slug>/`.
    - Create or update a map page in `wiki/maps/` for the topic.
+   - The map must include method taxonomy, tool/dataset/code matrix, trend timeline, paper-to-paper relationships, research gaps, and a recommended reading order.
    - Update `wiki/log.md` with run date, query, source set, counts, and manual-review queue.
 
-8. Report completion.
-   - Return counts for found, deduplicated, imported, PDF-attached, analyzed, Obsidian-written, skipped, and `需要人工复核`.
+9. Report completion.
+   - Return counts for found, deduplicated, imported, PDF-attached, full-text-extracted, structured-read, deep-read, Obsidian-written, skipped, and `需要人工复核`.
    - Link the created/updated Obsidian files and name any blocked source, missing PDF, Zotero issue, or weak extraction.
 
 ## Output Discipline
 
-- Keep every claim tied to a source URL, Zotero item, PDF path, or explicit inference label.
+- Keep every claim tied to a source URL, Zotero item, PDF path, full-text evidence path, page reference, or explicit inference label.
 - Do not bulk-download from paywalled publisher sites.
-- For broad topics, run an abstract-level triage first; deep-read only the selected top papers unless the user asks for exhaustive processing.
+- For broad topics, run an abstract-level triage first; deep-read only the selected top papers unless the user asks for exhaustive processing. Make the triage/deep-read boundary explicit in the map.
 - For batch writes, prefer small batches and resumable manifests under `tmp/literature-harvest/`.
 - Do not write local absolute paths into Obsidian notes or `manifest.json`; use relative paths there. Keep absolute PDF paths only in local-only BibTeX when needed for Zotero attachment import.
+- Do not present AI synthesis as the final human judgment. End notes and maps with the evidence-backed reading state plus the manual questions still worth checking in the original paper.
 
 ## References
 
 - `references/source-policy.md`: source routing, venue handling, and legal/safety boundaries.
+- `references/deep-reading-workflow.md`: reading-depth policy, full-text evidence extraction, single-paper note requirements, and topic synthesis requirements.
 - `references/obsidian-output.md`: note schema, map schema, and log update format.
 - `references/zotero-workflow.md`: Zotero selected-target preflight, import guardrails, path policy, and resume protocol.
 - `references/zotero-web-api.md`: full-auto Zotero Web API import, collection creation, attachment modes, and credential handling.
