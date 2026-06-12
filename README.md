@@ -33,8 +33,10 @@
 - `SKILL.md`：Codex skill 入口，包含触发词、工作流、边界和输出纪律。
 - `scripts/build_literature_plan.py`：根据关键词、会议、年份生成检索计划。
 - `scripts/harvest_arxiv.py`：arXiv MVP 抓取器，可以查询 arXiv、过滤候选、下载开放 PDF、生成 BibTeX 和 manifest。
+- `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
 - `references/obsidian-output.md`：定义 Obsidian 笔记、topic map 和日志格式。
+- `references/zotero-workflow.md`：定义 Zotero selected-target 预检、暂停导入和恢复流程。
 - `agents/openai.yaml`：Codex UI 元数据。
 
 ## 当前边界
@@ -44,7 +46,7 @@
 - 不编造缺失的 DOI、BibTeX key、venue、PDF URL、数据集、代码链接或论文贡献。
 - arXiv 已有可执行脚本；ACL / EMNLP / CCL 等来源目前通过 skill 里的 source policy 指导 Codex 使用官方页面/API 检索，后续可以继续补成独立脚本。
 - 大批量任务默认先做候选筛选，不默认深读每一篇。
-- 写入 Zotero 属于库写操作：除非用户明确要求“导入/写入 Zotero”，否则应先展示候选清单并等待确认。
+- 写入 Zotero 属于库写操作：必须先检查当前 Zotero 选中的库/collection；目标不匹配时只生成待导入产物，不导入。
 
 ## 安装方式
 
@@ -95,15 +97,31 @@ python -B C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\script
 - `references.bib`：可导入 Zotero 的 BibTeX。
 - `pdfs/`：成功下载的开放 PDF。
 
+路径策略：
+
+- `manifest.json` 默认使用相对 PDF 路径，便于分享和审计。
+- `references.bib` 默认使用本机绝对 PDF 路径，便于 Zotero 导入时附加 PDF。不要把 `tmp/literature-harvest/` 运行产物提交到公开仓库。
+
 ### 3. 导入 Zotero
 
 建议让 Codex 使用 Zotero skill 执行：
 
 1. 先运行 Zotero 状态检查：`status --json`。
-2. 按 DOI / title 搜索 Zotero，避免重复导入。
-3. 导入 `references.bib`。
-4. 只附加从开放来源下载成功的 PDF。
-5. 在 Obsidian 笔记中记录 Zotero item key 和 BibTeX key。
+2. 检查当前 Zotero 选中的目标 collection：
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\zotero_preflight.py `
+  --expected-name "rag-kg" `
+  --json
+```
+
+3. 如果目标不匹配，停止导入，只保留 `references.bib`、PDF、manifest 和 Obsidian 笔记，并把状态标记为 `pending_target_confirmation`。
+4. 目标正确后，按 DOI / title 搜索 Zotero，避免重复导入。
+5. 导入 `references.bib`。
+6. 只附加从开放来源下载成功的 PDF。
+7. 在 Obsidian 笔记中记录 Zotero item key 和 BibTeX key。
+
+说明：Zotero Connector 的 BibTeX/RIS 导入会写入“当前选中的”库或 collection。这个 skill 不能替 Zotero 自动创建/切换 collection，因此必须先做 selected-target 预检。
 
 ### 4. 写入 Obsidian
 
@@ -138,6 +156,7 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 
 - `build_literature_plan.py` 可以运行，并能把 `EINLP` 归一化为 `EMNLP`。
 - `harvest_arxiv.py --help` 可以从全局 Codex skill 路径正常调用。
+- `zotero_preflight.py --help` 可以运行，用于导入前检查 selected collection。
 - 直接下载 arXiv PDF 的 smoke test 成功，文件头为 `%PDF-`。
 - 启动 Zotero 后，本地 API 可达，测试环境中识别到 Zotero `9.0.5`、API v3。
 
@@ -145,6 +164,7 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 
 - arXiv API 在频繁请求时可能超时或返回 HTTP 429。遇到这种情况应减小批量、增加 delay、稍后重试。
 - 目前只有 arXiv 抓取器是脚本化 MVP；ACL / EMNLP / CCL 等来源还需要继续补充专用抓取脚本。
+- Zotero collection 仍需要用户在 Zotero UI 中先选中或创建；skill 负责检测和阻止错误导入。
 
 ## 许可证
 

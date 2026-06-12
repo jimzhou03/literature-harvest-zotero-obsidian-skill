@@ -42,6 +42,13 @@ def safe_key(title: str, year: int, arxiv_id: str) -> str:
     return f"{stem}_{year}_{suffix}"
 
 
+def display_path(path: Path, base: Path) -> str:
+    try:
+        return path.resolve().relative_to(base.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def arxiv_query(terms: list[str]) -> str:
     pieces: list[str] = []
     for term in terms:
@@ -59,6 +66,10 @@ def request_text(url: str, timeout: int = 30) -> str:
 
 
 def download_file(url: str, destination: Path, timeout: int = 60) -> int:
+    if destination.exists():
+        data = destination.read_bytes()
+        if data.startswith(b"%PDF"):
+            return len(data)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as response:
         data = response.read()
@@ -119,7 +130,7 @@ def relevance_score(item: dict[str, Any], terms: list[str]) -> int:
     return score
 
 
-def bib_entry(item: dict[str, Any]) -> str:
+def bib_entry(item: dict[str, Any], *, bib_file_mode: str = "absolute") -> str:
     year = item.get("year") or dt.date.today().year
     key = item.get("bibtex_key") or safe_key(item["title"], year, item["arxiv_id"])
     authors = " and ".join(item.get("authors") or ["Unknown"])
@@ -133,7 +144,7 @@ def bib_entry(item: dict[str, Any]) -> str:
         "url": item["source_url"],
     }
     if item.get("pdf_path"):
-        fields["file"] = item["pdf_path"]
+        fields["file"] = item.get("_pdf_abs_path") if bib_file_mode == "absolute" else item["pdf_path"]
     lines = [f"@misc{{{key},"]
     for name, value in fields.items():
         if value:
@@ -150,6 +161,12 @@ def main() -> int:
     parser.add_argument("--download", action="store_true", help="Download PDFs for retained candidates.")
     parser.add_argument("--out", required=True, help="Output directory for manifest, BibTeX, and PDFs.")
     parser.add_argument("--delay", type=float, default=3.0, help="Delay before each PDF download.")
+    parser.add_argument(
+        "--bib-file-mode",
+        choices=["absolute", "relative"],
+        default="absolute",
+        help="Use absolute file paths in references.bib for Zotero attachment import, or relative paths for sharing.",
+    )
     parser.add_argument("--unicode", action="store_true", help="Emit unescaped Unicode in JSON output.")
     args = parser.parse_args()
 
@@ -202,11 +219,16 @@ def main() -> int:
             pdf_path = pdf_dir / pdf_name
             try:
                 bytes_written = download_file(item["pdf_url"], pdf_path)
-                item["pdf_path"] = str(pdf_path)
+                data = pdf_path.read_bytes()
+                if not data.startswith(b"%PDF"):
+                    raise RuntimeError("downloaded file header is not %PDF")
+                item["pdf_path"] = display_path(pdf_path, out_dir)
+                item["_pdf_abs_path"] = str(pdf_path.resolve())
                 item["pdf_bytes"] = bytes_written
                 item["pdf_download_status"] = "ok"
             except Exception as exc:  # noqa: BLE001 - preserve concrete failure in manifest.
                 item["pdf_path"] = ""
+                item["_pdf_abs_path"] = ""
                 item["pdf_bytes"] = 0
                 item["pdf_download_status"] = f"failed: {exc}"
 
@@ -217,13 +239,21 @@ def main() -> int:
         "normalized_terms": terms,
         "years": years,
         "count": len(candidates),
-        "items": candidates,
+        "zotero_import_status": "not_started",
+        "path_policy": {
+            "manifest_pdf_path": "relative_to_output_dir",
+            "bib_file_field": args.bib_file_mode,
+        },
+        "items": [{key: value for key, value in item.items() if not key.startswith("_")} for item in candidates],
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=not args.unicode, indent=2) + "\n",
         encoding="utf-8",
     )
-    (out_dir / "references.bib").write_text("\n\n".join(bib_entry(item) for item in candidates) + "\n", encoding="utf-8")
+    (out_dir / "references.bib").write_text(
+        "\n\n".join(bib_entry(item, bib_file_mode=args.bib_file_mode) for item in candidates) + "\n",
+        encoding="utf-8",
+    )
     print(json.dumps({"out": str(out_dir), "count": len(candidates)}, ensure_ascii=not args.unicode))
     return 0
 

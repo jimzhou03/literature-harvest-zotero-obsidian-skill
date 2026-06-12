@@ -191,6 +191,8 @@ def build_plan(args: argparse.Namespace) -> dict[str, object]:
         "sources": source_plan(venues, terms),
         "zotero": {
             "collection": f"Literature Harvest/{today}/{topic_slug}",
+            "preflight_command": f'python <skill-dir>/scripts/zotero_preflight.py --expected-name "{topic_slug}" --json',
+            "import_status": "not_started",
             "dedupe_keys": ["doi", "arxiv_id", "acl_id", "openreview_forum_id", "normalized_title"],
         },
         "obsidian": {

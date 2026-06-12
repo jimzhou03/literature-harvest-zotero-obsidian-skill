@@ -32,8 +32,10 @@ Use this skill when the user asks Codex to:
 - `SKILL.md`: Codex skill entrypoint with triggers, workflow, boundaries, and output discipline.
 - `scripts/build_literature_plan.py`: deterministic query/source plan builder.
 - `scripts/harvest_arxiv.py`: arXiv MVP harvester that can query arXiv, filter candidates, download open PDFs, and generate BibTeX plus a manifest.
+- `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
 - `references/obsidian-output.md`: Obsidian note, map, and log formats.
+- `references/zotero-workflow.md`: Zotero selected-target guardrails, pending-import state, and resume protocol.
 - `agents/openai.yaml`: Codex UI metadata.
 
 ## Boundaries
@@ -43,7 +45,7 @@ Use this skill when the user asks Codex to:
 - It does not fabricate missing DOI, venue, BibTeX key, PDF URL, dataset, code link, or novelty claims.
 - arXiv has a runnable MVP script. ACL / EMNLP / CCL are currently guided by source policy and can be extended with dedicated scripts later.
 - Large batches should be triaged first. Deep-read only selected papers unless the user explicitly asks for exhaustive processing.
-- Zotero writes should happen only after explicit user instruction or confirmation of a concrete candidate set.
+- Zotero writes must be preceded by selected-target validation. If the current Zotero collection is wrong, generate import-ready artifacts but do not import.
 
 ## Installation
 
@@ -84,15 +86,31 @@ Outputs:
 - `references.bib`: BibTeX entries for Zotero import.
 - `pdfs/`: downloaded open PDFs.
 
+Path policy:
+
+- `manifest.json` uses relative PDF paths by default.
+- `references.bib` uses local absolute PDF paths by default so Zotero can attach downloaded files. Do not commit generated `tmp/literature-harvest/` outputs to public repositories.
+
 ## Zotero Workflow
 
 Ask Codex to use the Zotero skill after candidate generation:
 
 1. Check Zotero readiness with `status --json`.
-2. Search Zotero by DOI/title before import to avoid duplicates.
-3. Import the generated BibTeX after the candidate set is confirmed.
-4. Attach only PDFs downloaded from open sources.
-5. Record both Zotero item keys and BibTeX keys in Obsidian notes.
+2. Check the currently selected Zotero collection:
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\zotero_preflight.py `
+  --expected-name "rag-kg" `
+  --json
+```
+
+3. If the target does not match, stop before import and keep `references.bib`, PDFs, the manifest, and Obsidian notes as `pending_target_confirmation`.
+4. Search Zotero by DOI/title before import to avoid duplicates.
+5. Import the generated BibTeX after the selected target is correct.
+6. Attach only PDFs downloaded from open sources.
+7. Record both Zotero item keys and BibTeX keys in Obsidian notes.
+
+Note: Zotero Connector imports BibTeX/RIS records into the currently selected library or collection. This skill validates that target; it does not create or switch Zotero collections for the user.
 
 ## Obsidian Workflow
 
@@ -123,12 +141,14 @@ Validated locally:
 
 - `build_literature_plan.py` runs and normalizes `EINLP` to `EMNLP`.
 - `harvest_arxiv.py --help` runs from the global Codex skill path.
+- `zotero_preflight.py --help` runs and provides a selected-target guard before import.
 - Direct arXiv PDF download smoke test produced a valid `%PDF-` file.
 - Zotero Desktop local API was reachable after launching Zotero.
 
 Known limitation:
 
 - arXiv API may time out or return HTTP 429 when rate-limited. Use smaller batches, add delays, and retry later.
+- Zotero collections still need to be created or selected in the Zotero UI; the skill detects mismatches and blocks wrong imports.
 
 ## License
 

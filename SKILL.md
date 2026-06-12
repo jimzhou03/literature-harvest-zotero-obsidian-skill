@@ -27,6 +27,14 @@ For an arXiv-only first pass with PDF download and BibTeX generation:
 python <skill-dir>/scripts/harvest_arxiv.py --keywords "RAG, KG" --years "2023:2026" --max-results 20 --download --out tmp/literature-harvest/rag-kg
 ```
 
+Before any Zotero import, check the current Zotero target:
+
+```bash
+python <skill-dir>/scripts/zotero_preflight.py --expected-name "rag-kg" --json
+```
+
+If the selected Zotero collection does not match the intended run, stop before import, preserve the generated BibTeX/PDF/Obsidian artifacts, and ask the user to select or create the correct collection.
+
 ## Workflow
 
 1. Parse scope.
@@ -37,6 +45,7 @@ python <skill-dir>/scripts/harvest_arxiv.py --keywords "RAG, KG" --years "2023:2
 2. Build a source plan.
    - Run `scripts/build_literature_plan.py` for a deterministic query plan.
    - Read `references/source-policy.md` before fetching from venues or journals.
+   - If the user requested Zotero writes, read `references/zotero-workflow.md` and plan the target collection before download/import.
    - Prefer official/open routes: arXiv API, ACL Anthology, OpenReview, PMLR, CVF OpenAccess, DBLP, Crossref/OpenAlex/Semantic Scholar metadata, publisher pages, and author/project pages.
    - Do not bypass paywalls, login gates, robots restrictions, or publisher terms. Only download PDFs from clearly open sources.
 
@@ -53,7 +62,9 @@ python <skill-dir>/scripts/harvest_arxiv.py --keywords "RAG, KG" --years "2023:2
 
 5. Import into Zotero.
    - Use the Zotero skill when available. Start with the helper `status --json`.
-   - If the prompt explicitly says to import/write Zotero, proceed with imports after candidate criteria are concrete. Otherwise show the candidate table and ask for confirmation before library writes.
+   - Run `scripts/zotero_preflight.py --expected-name "<intended collection or topic>" --json` before `import-bibtex` or `import-ris`.
+   - If the selected Zotero target is wrong, do not import. Mark the run as `pending_target_confirmation`, keep the BibTeX/PDF artifacts, write Obsidian notes with `zotero_item_key: "TBD"`, and tell the user how to resume after switching Zotero collections.
+   - If the prompt explicitly says to import/write Zotero and the selected target is correct, proceed with imports after candidate criteria are concrete. Otherwise show the candidate table and ask for confirmation before library writes.
    - Prefer BibTeX/RIS import for metadata. Attach open PDFs only when the source is open and the file was successfully downloaded.
    - Record both Zotero item key and exported BibTeX key; they are not the same identifier.
 
@@ -78,8 +89,10 @@ python <skill-dir>/scripts/harvest_arxiv.py --keywords "RAG, KG" --years "2023:2
 - Do not bulk-download from paywalled publisher sites.
 - For broad topics, run an abstract-level triage first; deep-read only the selected top papers unless the user asks for exhaustive processing.
 - For batch writes, prefer small batches and resumable manifests under `tmp/literature-harvest/`.
+- Do not write local absolute paths into Obsidian notes or `manifest.json`; use relative paths there. Keep absolute PDF paths only in local-only BibTeX when needed for Zotero attachment import.
 
 ## References
 
 - `references/source-policy.md`: source routing, venue handling, and legal/safety boundaries.
 - `references/obsidian-output.md`: note schema, map schema, and log update format.
+- `references/zotero-workflow.md`: Zotero selected-target preflight, import guardrails, path policy, and resume protocol.
