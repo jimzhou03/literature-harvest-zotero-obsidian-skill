@@ -300,11 +300,18 @@ def update_log(path: Path, manifest: dict[str, Any], extracted_count: int) -> No
     structured_read = sum(
         1 for item in items if item.get("analysis_status") in {"structured-read", "deep-read"}
     )
+    low_confidence = sum(
+        1
+        for item in items
+        if item.get("analysis_confidence") == "low"
+        or item.get("evidence_level") in {"abstract_only", "metadata_only", "failed_extraction"}
+        or item.get("full_text_status") not in {None, "ok"}
+    )
     counts = (
         f"- Counts: found={len(items)}, unique={len(items)}, imported={imported}, "
         f"zotero_pending=0, pdf_attached={attached}, full_text_extracted={extracted_count}, "
         f"structured_read={structured_read}, deep_read={deep_read}, notes={len(items)}, "
-        f"review_required={len(items)}"
+        f"low_confidence={low_confidence}"
     )
     heading_match = re.search(rf"^## {re.escape(created)} Literature Harvest: .*$", text, flags=re.MULTILINE)
     if not heading_match:
@@ -375,10 +382,21 @@ def main() -> int:
             record = by_key.get(key)
             if not record:
                 continue
-            paper["full_text_status"] = record.get("status")
+            status = record.get("status")
+            paper["full_text_status"] = status
             paper["full_text_chars"] = record.get("char_count", 0)
             if record.get("full_text_path"):
                 paper["full_text_path"] = record["full_text_path"]
+            if status == "ok":
+                paper.setdefault("evidence_level", "full_text")
+                paper.setdefault("analysis_confidence", "medium")
+            elif status == "missing_pdf":
+                paper["evidence_level"] = "metadata_only"
+                paper["analysis_confidence"] = "low"
+            else:
+                paper["evidence_level"] = "failed_extraction"
+                paper["analysis_confidence"] = "low"
+            paper["review_gate"] = "none"
         manifest["pdf_evidence_status"] = "extracted"
         manifest["pdf_evidence_path"] = rel(out_path, manifest_path.parent)
         manifest["pdf_evidence_summary"] = evidence["summary"]

@@ -189,6 +189,8 @@ def build_plan(args: argparse.Namespace) -> dict[str, object]:
         },
         "reading": {
             "default_depth": args.reading_depth,
+            "automation_mode": "full_auto",
+            "review_gate": "none",
             "policy": "triage all candidates, extract PDF evidence for accessible papers, structured-read/deep-read the selected set",
             "pdf_evidence_command": f"python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-harvest/{today}-{topic_slug}/manifest.json --write-text --update",
             "required_outputs": [

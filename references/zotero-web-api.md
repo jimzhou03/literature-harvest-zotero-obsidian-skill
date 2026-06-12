@@ -1,6 +1,6 @@
 # Zotero Web API Full Automation
 
-Use this path when the user wants end-to-end automation without manually creating or selecting a Zotero Desktop collection.
+Use this path when the user wants end-to-end automation without Zotero Desktop collection selection.
 
 ## One-Time Setup
 

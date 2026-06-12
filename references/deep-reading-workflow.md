@@ -9,13 +9,13 @@ Treat literature work as four connected but different jobs:
 1. Paper search: discover candidates, download open PDFs, deduplicate, and rank.
 2. Paper dissection: read one paper end to end and reconstruct problem, method, experiments, artifacts, and limits.
 3. Literature review: group many papers by method family, task setting, dataset/tooling, chronology, and unresolved gap.
-4. Research workflow support: preserve the library, evidence, reading order, and follow-up questions so the user can judge from original papers.
+4. Research workflow support: preserve the library, evidence, reading order, and follow-up questions so the automated analysis remains traceable.
 
 Do not collapse these into "summarize each paper in one or two sentences." A short summary is only a triage artifact.
 
 ## Reading Depth
 
-- `triage`: title/abstract/metadata only. Use for broad discovery or papers without accessible full text. Mark `需要人工复核`.
+- `triage`: title/abstract/metadata only. Use for broad discovery or papers without accessible full text. Mark `evidence_level: abstract_only` or `metadata_only` and `analysis_confidence: low`.
 - `structured-read`: accessible full PDF was text-extracted and read through problem, method, evaluation, artifacts, and limitations. This is the default for selected papers.
 - `deep-read`: structured-read plus critical synthesis, related-work positioning, artifact-level evidence, and concrete takeaways. Use for top papers, user-selected papers, or manageable batches.
 
@@ -25,6 +25,7 @@ Default policy:
 - User asks "which papers should I read": do not deep-read all papers first; build the candidate pool and reading order.
 - User asks "what has this direction done in recent years": write a review map with method groups, trend timeline, and gaps; deep-read representative papers.
 - User asks "from beginning to end" or "complete analysis": structured-read every accessible PDF if the batch is small; otherwise explain the batch/depth tradeoff and proceed with the top set.
+- User asks for full automation: do not stop for confirmation. Produce the best automated analysis possible, and encode uncertainty through `analysis_confidence`, `evidence_level`, and explicit limitations.
 
 ## Evidence Extraction
 
@@ -65,7 +66,7 @@ Every `structured-read` or `deep-read` note must include these sections:
 - `Strengths`: what is convincing and why.
 - `Limitations`: weak assumptions, missing baselines, narrow datasets, reproducibility gaps, or deployment costs.
 - `My Takeaways`: reusable ideas, relation to the user's topic, and follow-up questions.
-- `Reading Confidence`: `high`, `medium`, or `low`, with reasons such as full-text extraction quality, missing PDF, or abstract-only status.
+- `Analysis Confidence`: `high`, `medium`, or `low`, with reasons such as full-text extraction quality, missing PDF, or abstract-only status.
 
 Keep claims traceable to source URLs, Zotero item keys, PDF paths, page numbers, or evidence snippets. Use `作者声称`, `论文展示`, and `我的判断` to separate attribution.
 
@@ -81,12 +82,12 @@ A topic map is not a list of paper blurbs. It must include:
 - Paper relationships: which papers are baselines, extensions, critiques, benchmarks, or system applications.
 - Research gaps: unresolved problems, weak evidence, missing evaluation, or promising follow-up questions.
 - Recommended reading order: entry papers, foundation papers, representative methods, and papers to defer.
-- Manual verification queue: claims that need the user to return to the original PDF.
+- Low-confidence analysis queue: papers or claims whose automated analysis is based on weak evidence, missing artifacts, failed PDF extraction, or abstract-only metadata.
 
 ## Guardrails
 
 - Do not overstate venue, novelty, citation impact, code availability, dataset usage, or experiment results when the paper does not support it.
 - Do not treat arXiv popularity as peer-reviewed quality.
-- Do not let the review map hide uncertainty. Mark abstract-only, extraction-failed, and metadata-only papers clearly.
+- Do not let the review map hide uncertainty. Mark abstract-only, extraction-failed, and metadata-only papers clearly with confidence fields.
 - Do not use "AI says" as evidence. The evidence is the paper, metadata source, Zotero item, PDF, or extracted text.
-- The final human judgment still belongs to the user. The skill should accelerate finding, dissecting, comparing, and organizing evidence.
+- The workflow is fully automated by default. The skill should finish finding, dissecting, comparing, and organizing evidence without waiting for a review step.

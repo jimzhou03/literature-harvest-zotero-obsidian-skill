@@ -7,11 +7,11 @@ description: Harvest academic papers from open sources into Zotero and Obsidian,
 
 ## Overview
 
-Use this skill to turn a topic request into a controlled literature-reading run: find candidate papers from open academic sources, deduplicate them, import metadata and open PDFs into Zotero, extract full-text evidence from accessible PDFs, write structured paper notes, and synthesize methods, tools, trends, and gaps into this Obsidian vault.
+Use this skill to turn a topic request into a fully automated literature-reading run: find candidate papers from open academic sources, deduplicate them, import metadata and open PDFs into Zotero, extract full-text evidence from accessible PDFs, write structured paper notes, and synthesize methods, tools, trends, and gaps into this Obsidian vault.
 
-Respect the vault rules: preserve sources, avoid unsupported claims, mark weak extraction as `需要人工复核`, maintain Obsidian links, and update `wiki/log.md` after batch writes.
+Respect the vault rules: preserve sources, avoid unsupported claims, record weak extraction as low confidence, maintain Obsidian links, and update `wiki/log.md` after batch writes.
 
-This is not a "one paragraph summary" skill. Default to making the reading process visible: what problem the paper solves, how the method works, what experiments support it, what artifacts matter, and what remains uncertain. Use short abstract-only notes only as triage, not as final reading output.
+This is not a "one paragraph summary" skill. Default to making the reading process visible: what problem the paper solves, how the method works, what experiments support it, what artifacts matter, and what remains uncertain. No review gate should block the workflow; finish the automated analysis and express uncertainty with evidence level, confidence, and limitations.
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ python <skill-dir>/scripts/zotero_preflight.py --expected-name "rag-kg" --json
 
 If the selected Zotero collection does not match the intended run, stop before import, preserve the generated BibTeX/PDF/Obsidian artifacts, and ask the user to select or create the correct collection.
 
-For full automation without manual Zotero Desktop collection selection, prefer Zotero Web API mode when `ZOTERO_API_KEY` is available:
+For full automation without Zotero Desktop collection selection, prefer Zotero Web API mode when `ZOTERO_API_KEY` is available:
 
 ```bash
 python <skill-dir>/scripts/zotero_web_import.py --manifest tmp/literature-harvest/rag-kg/manifest.json --collection "Literature Harvest/<date>/rag-kg" --note-root wiki/sources/论文阅读/rag-kg --map "wiki/maps/rag-kg Literature Map.md" --pdf-mode imported-url --update
@@ -93,7 +93,7 @@ python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-har
    - For deep analysis, use the `paper-deep-reading` skill when available.
    - For each structured-read/deep-read paper, do three passes: abstract/introduction/conclusion, method/system/algorithm, then evaluation/artifacts/limitations.
    - Deep-read open PDFs for the top selected papers by default. If the user explicitly asks for complete reading and the batch is manageable, deep-read every accessible PDF; otherwise triage all and deep-read the agreed top set.
-   - For the rest, write triage notes from metadata/abstract only and label them `需要人工复核`; do not make these look like final paper-reading notes.
+   - For the rest, write automated triage notes from metadata/abstract only and label them `evidence_level: abstract_only` plus `analysis_confidence: low`; do not block the run.
    - Separate paper claims from Codex analysis. Do not infer venue, dataset, code, novelty, or results when absent from the source.
    - Each final note must answer: solved problem, core idea, method mechanism, experiment setup/results, key artifacts, strengths, limitations, reusable tools/datasets/code, and your concrete takeaways.
 
@@ -102,10 +102,10 @@ python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-har
    - Default note root: `wiki/sources/论文阅读/<topic-slug>/`.
    - Create or update a map page in `wiki/maps/` for the topic.
    - The map must include method taxonomy, tool/dataset/code matrix, trend timeline, paper-to-paper relationships, research gaps, and a recommended reading order.
-   - Update `wiki/log.md` with run date, query, source set, counts, and manual-review queue.
+   - Update `wiki/log.md` with run date, query, source set, counts, and low-confidence analysis queue.
 
 9. Report completion.
-   - Return counts for found, deduplicated, imported, PDF-attached, full-text-extracted, structured-read, deep-read, Obsidian-written, skipped, and `需要人工复核`.
+   - Return counts for found, deduplicated, imported, PDF-attached, full-text-extracted, structured-read, deep-read, Obsidian-written, skipped, and low-confidence items.
    - Link the created/updated Obsidian files and name any blocked source, missing PDF, Zotero issue, or weak extraction.
 
 ## Output Discipline
@@ -115,7 +115,7 @@ python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-har
 - For broad topics, run an abstract-level triage first; deep-read only the selected top papers unless the user asks for exhaustive processing. Make the triage/deep-read boundary explicit in the map.
 - For batch writes, prefer small batches and resumable manifests under `tmp/literature-harvest/`.
 - Do not write local absolute paths into Obsidian notes or `manifest.json`; use relative paths there. Keep absolute PDF paths only in local-only BibTeX when needed for Zotero attachment import.
-- Do not present AI synthesis as the final human judgment. End notes and maps with the evidence-backed reading state plus the manual questions still worth checking in the original paper.
+- Do not pause for external verification. Complete the automated analysis, but make evidence limitations explicit with `analysis_confidence`, `evidence_level`, and concrete unsupported-claim notes.
 
 ## References
 

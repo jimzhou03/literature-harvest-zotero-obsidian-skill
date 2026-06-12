@@ -28,8 +28,9 @@ pdf_url: "<open PDF URL or TBD>"
 pdf_path: "<local path or TBD>"
 full_text_status: "ok | missing_pdf | extract_failed | TBD"
 full_text_path: "<relative extracted text path or TBD>"
-reading_confidence: "high | medium | low"
-review_required: true
+evidence_level: "full_text | abstract_only | metadata_only | failed_extraction"
+analysis_confidence: "high | medium | low"
+review_gate: "none"
 created: "YYYY-MM-DD"
 ---
 ```
@@ -65,7 +66,7 @@ For `structured-read` or `deep-read` notes, fill every section. If a section doe
 - Which figures, tables, algorithms, equations, or definitions carry the main claims?
 - What are the limitations and reusable takeaways?
 
-For abstract-only notes, use `status: triage`, write `需要人工复核` near the top, and do not present the note as a completed reading.
+For abstract-only notes, use `status: triage`, `evidence_level: abstract_only`, and `analysis_confidence: low`. Still produce an automated analysis, but state that the evidence base is weaker than full-text reading.
 
 ## Topic Map Schema
 
@@ -82,7 +83,7 @@ The map page should include:
 - Paper relationship graph in prose: baseline, extension, benchmark, critique, system application, or follow-up.
 - Research gaps and unresolved questions.
 - Recommended reading order.
-- Open questions and manual-review queue.
+- Low-confidence analysis queue: items whose automated analysis is based on abstract-only metadata, failed PDF extraction, or missing key artifacts.
 
 ## Log Entry
 
@@ -93,7 +94,7 @@ Append to `wiki/log.md`:
 
 - Query: <raw user query>
 - Sources: <source list>
-- Counts: found=<n>, unique=<n>, imported=<n>, pdf_attached=<n>, full_text_extracted=<n>, structured_read=<n>, deep_read=<n>, notes=<n>, review_required=<n>
+- Counts: found=<n>, unique=<n>, imported=<n>, pdf_attached=<n>, full_text_extracted=<n>, structured_read=<n>, deep_read=<n>, notes=<n>, low_confidence=<n>
 - Outputs: [[<topic-slug> Literature Map]]
-- Notes: <blocked sources, missing PDFs, or uncertainty>
+- Notes: <blocked sources, missing PDFs, low-confidence evidence, or uncertainty>
 ```

@@ -14,7 +14,7 @@ into a repeatable workflow:
 4. Generate `manifest.json` and `references.bib`.
 5. Import metadata and open PDFs into Zotero through Codex's Zotero workflow.
 6. Extract full-text evidence, section hints, method/evaluation/limitation snippets, and figure/table/algorithm references from accessible PDFs.
-7. Use Codex to produce structured paper readings that explain the problem, method, experiments, tools/data/code, limitations, and takeaways.
+7. Use Codex to produce automated structured paper readings that explain the problem, method, experiments, tools/data/code, limitations, and takeaways.
 8. Write paper notes plus topic-level method/tool/trend/gap synthesis into an Obsidian vault.
 
 ## When To Use
@@ -39,7 +39,7 @@ Use this skill when the user asks Codex to:
 - `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates the manifest, Obsidian notes, topic map, and `wiki/log.md`.
 - `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
-- `references/deep-reading-workflow.md`: reading-depth policy, single-paper dissection, topic synthesis, evidence constraints, and human-judgment boundaries.
+- `references/deep-reading-workflow.md`: reading-depth policy, single-paper dissection, topic synthesis, evidence constraints, and automated analysis confidence.
 - `references/obsidian-output.md`: Obsidian note, map, and log formats.
 - `references/zotero-web-api.md`: full-auto Zotero Web API import, credential handling, and attachment modes.
 - `references/zotero-workflow.md`: Zotero selected-target guardrails, pending-import state, and resume protocol.
@@ -53,7 +53,7 @@ Use this skill when the user asks Codex to:
 - arXiv has a runnable MVP script. ACL / EMNLP / CCL are currently guided by source policy and can be extended with dedicated scripts later.
 - Large batches should be triaged first. Deep-read only selected papers unless the user explicitly asks for exhaustive processing.
 - When the user asks for full reading, the skill structured-reads accessible PDFs and makes any batch/depth tradeoff explicit.
-- Triage is only title/abstract-level screening. It must not be presented as a completed paper-reading conclusion.
+- Triage is title/abstract-level screening, but the workflow still produces automated analysis and records evidence strength with `evidence_level` and `analysis_confidence`.
 - Zotero writes should use Zotero Web API mode when `ZOTERO_API_KEY` is available, so the skill can create collections and import items automatically. Without an API key, use the local Connector selected-target fallback.
 
 ## Installation
@@ -191,7 +191,7 @@ Outputs:
 - `full_text/*.txt`: page-marked extracted full text.
 - Manifest fields such as `full_text_status`, `full_text_chars`, `full_text_path`, and `pdf_evidence_path`.
 
-This is an evidence index, not a final judgment. Codex should still inspect the evidence or original paper before making claims.
+This is the evidence index for automated analysis. Codex should inspect the evidence or original paper before making claims, and record confidence when evidence is weak.
 
 ## Obsidian Workflow
 
@@ -213,11 +213,11 @@ Paper notes should not default to one or two sentences. For `structured-read` an
 - Key artifacts: figures, tables, equations, algorithms, definitions
 - Tools / Data / Code
 - Strengths / Limitations / My Takeaways
-- Reading confidence and manual verification questions
+- Analysis confidence and low-confidence reasons
 
 Topic maps should include method taxonomy, tool/data/code matrix, trend timeline, paper relationships, research gaps, and recommended reading order.
 
-Use `需要人工复核` for metadata-only or weakly extracted notes.
+For metadata-only or weakly extracted notes, keep the automated analysis and mark `evidence_level: metadata_only` or `failed_extraction` plus `analysis_confidence: low`.
 
 ## Suggested Codex Prompts
 

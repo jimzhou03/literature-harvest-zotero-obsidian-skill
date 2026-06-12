@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Import a literature-harvest manifest into Zotero via the Zotero Web API.
 
-This mode avoids manual Zotero Desktop collection selection. It creates or
+This mode avoids Zotero Desktop collection selection. It creates or
 reuses a collection path, creates/reuses items, adds them to the collection,
 adds PDF attachments, and can update the manifest plus Obsidian notes.
 
@@ -430,6 +430,13 @@ def update_log(path: Path, manifest: dict[str, Any]) -> None:
     structured_read = sum(
         1 for item in items if item.get("analysis_status") in {"structured-read", "deep-read"}
     )
+    low_confidence = sum(
+        1
+        for item in items
+        if item.get("analysis_confidence") == "low"
+        or item.get("evidence_level") in {"abstract_only", "metadata_only", "failed_extraction"}
+        or item.get("full_text_status") not in {None, "ok"}
+    )
     collection = manifest.get("zotero_collection", "")
     collection_key = manifest.get("zotero_collection_key", "")
     mode = manifest.get("zotero_pdf_attachment_mode", "unknown")
@@ -437,11 +444,11 @@ def update_log(path: Path, manifest: dict[str, Any]) -> None:
         f"- Counts: found={len(items)}, unique={len(items)}, imported={imported}, "
         f"zotero_pending=0, pdf_attached={attached}, full_text_extracted={full_text_extracted}, "
         f"structured_read={structured_read}, deep_read={deep_read}, notes={len(items)}, "
-        f"review_required={len(items)}"
+        f"low_confidence={low_confidence}"
     )
     notes = (
         f"- Notes: Zotero Web API 已导入 collection `{collection}` (`{collection_key}`)；"
-        f"PDF 附件模式 `{mode}`；所有细节结论需要人工复核。"
+        f"PDF 附件模式 `{mode}`；自动分析已完成，低置信度项见 `low_confidence`。"
     )
     heading_match = re.search(rf"^## {re.escape(created)} Literature Harvest: .*$", text, flags=re.MULTILINE)
     if not heading_match:

@@ -22,7 +22,7 @@
 - Do not bypass paywalls, CAPTCHA, login walls, rate limits, or robots restrictions.
 - Do not mass-download from publisher pages. Use conservative batch sizes and delays.
 - Do not fabricate missing BibTeX keys, DOIs, venues, abstracts, datasets, code links, or PDF URLs.
-- If only metadata is available, keep the record but mark the analysis as `metadata-only` and `需要人工复核`.
+- If only metadata is available, keep the record but mark the analysis as `metadata-only`, `evidence_level: metadata_only`, and `analysis_confidence: low`.
 
 ## Ranking Guidance
 

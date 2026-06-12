@@ -14,7 +14,7 @@
 4. 生成 `manifest.json` 和 `references.bib`，用于追踪来源和导入 Zotero。
 5. 通过 Codex 的 Zotero 工作流把元数据和开放 PDF 写入 Zotero。
 6. 对可访问 PDF 提取全文证据、章节线索、方法/实验/局限片段和关键图表算法引用。
-7. 通过 Codex 对选中论文做结构化阅读，回答“解决什么问题、用了什么方法、实验证明什么、工具/数据/代码是什么、局限在哪里”。
+7. 通过 Codex 对选中论文做自动结构化阅读，回答“解决什么问题、用了什么方法、实验证明什么、工具/数据/代码是什么、局限在哪里”。
 8. 把单篇阅读笔记和主题级方法/工具/趋势/研究 gap 综述写入 Obsidian vault。
 
 ## 适用场景
@@ -40,7 +40,7 @@
 - `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 manifest、Obsidian 笔记、topic map 和 `wiki/log.md`。
 - `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
-- `references/deep-reading-workflow.md`：定义阅读深度、单篇拆解、主题综述、证据约束和人工判断边界。
+- `references/deep-reading-workflow.md`：定义阅读深度、单篇拆解、主题综述、证据约束和自动分析置信度。
 - `references/obsidian-output.md`：定义 Obsidian 笔记、topic map 和日志格式。
 - `references/zotero-web-api.md`：定义 Zotero Web API 全自动导入、credential 处理和 attachment 模式。
 - `references/zotero-workflow.md`：定义 Zotero selected-target 预检、暂停导入和恢复流程。
@@ -53,7 +53,7 @@
 - 不编造缺失的 DOI、BibTeX key、venue、PDF URL、数据集、代码链接或论文贡献。
 - arXiv 已有可执行脚本；ACL / EMNLP / CCL 等来源目前通过 skill 里的 source policy 指导 Codex 使用官方页面/API 检索，后续可以继续补成独立脚本。
 - 大批量任务默认先做候选筛选，不默认深读每一篇；但用户明确要求“精读 / 从头到尾 / 完整分析”时，会对可访问 PDF 做结构化阅读，并在数量过大时明确说明深度与批量的取舍。
-- triage 只代表标题/摘要层面的初筛，不能当成最终读文献结论。
+- triage 只代表标题/摘要层面的初筛，但仍会自动产出分析；输出中用 `evidence_level` 和 `analysis_confidence` 标明证据强弱。
 - 写入 Zotero 属于库写操作。全自动模式优先使用 Zotero Web API 和 `ZOTERO_API_KEY` 自动创建 collection / 导入 item；没有 API key 时才退回本地 Connector selected-target 预检。
 
 ## 安装方式
@@ -201,7 +201,7 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\e
 - `full_text/*.txt`：带页码标记的全文抽取结果。
 - `manifest.json` 回填：`full_text_status`、`full_text_chars`、`full_text_path`、`pdf_evidence_path`。
 
-这一步只是证据索引，不替你下最终判断。Codex 后续写笔记时必须回到这些证据或原文。
+这一步是自动分析的证据索引。Codex 后续写笔记时必须回到这些证据或原文，并用置信度标出证据强弱。
 
 ### 5. 写入 Obsidian
 
@@ -223,14 +223,16 @@ tmp/literature-harvest/<date>-<topic-slug>/manifest.json
 - Key Artifacts：关键图、表、公式、算法、定义
 - Tools / Data / Code
 - Strengths / Limitations / My Takeaways
-- Reading Confidence 和需要人工复核的问题
+- Analysis Confidence 和低置信度原因
 
 主题地图必须包含方法分类、工具/数据/代码矩阵、趋势时间线、论文关系、研究 gap 和推荐阅读顺序。
 
-如果只基于标题/摘要判断，要在笔记中标注：
+如果只基于标题/摘要判断，也继续自动分析，但要在笔记中标注：
 
 ```text
-需要人工复核
+evidence_level: abstract_only
+analysis_confidence: low
+review_gate: none
 ```
 
 ## 推荐的 Codex 提示词
