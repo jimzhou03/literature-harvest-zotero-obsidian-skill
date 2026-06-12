@@ -32,7 +32,7 @@ Use this skill when the user asks Codex to:
 - `SKILL.md`: Codex skill entrypoint with triggers, workflow, boundaries, and output discipline.
 - `scripts/build_literature_plan.py`: deterministic query/source plan builder.
 - `scripts/harvest_arxiv.py`: arXiv MVP harvester that can query arXiv, filter candidates, download open PDFs, and generate BibTeX plus a manifest.
-- `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates Obsidian outputs.
+- `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates the manifest, Obsidian notes, topic map, and `wiki/log.md`.
 - `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
 - `references/obsidian-output.md`: Obsidian note, map, and log formats.
@@ -138,7 +138,7 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
   --update
 ```
 
-This mode creates the collection path, imports/reuses items, adds PDF attachments, and updates the manifest plus Obsidian notes. Use `--pdf-mode upload-file --fallback-url-attachment` to try uploading local PDFs to Zotero File Storage, with URL attachment fallback.
+This mode creates the collection path, imports/reuses items, adds PDF attachments, and updates the manifest, Obsidian notes, topic map, and `wiki/log.md`. Use `--pdf-mode upload-file --fallback-url-attachment` to try uploading local PDFs to Zotero File Storage, with URL attachment fallback.
 
 ### Fallback: Zotero Connector
 

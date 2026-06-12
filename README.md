@@ -33,7 +33,7 @@
 - `SKILL.md`：Codex skill 入口，包含触发词、工作流、边界和输出纪律。
 - `scripts/build_literature_plan.py`：根据关键词、会议、年份生成检索计划。
 - `scripts/harvest_arxiv.py`：arXiv MVP 抓取器，可以查询 arXiv、过滤候选、下载开放 PDF、生成 BibTeX 和 manifest。
-- `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 Obsidian。
+- `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 manifest、Obsidian 笔记、topic map 和 `wiki/log.md`。
 - `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
 - `references/obsidian-output.md`：定义 Obsidian 笔记、topic map 和日志格式。
@@ -149,7 +149,7 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\z
   --update
 ```
 
-这个模式会自动创建 collection、导入文献 item、添加 PDF attachment，并回填 manifest / Obsidian 笔记。`--pdf-mode upload-file --fallback-url-attachment` 会尝试上传本地 PDF 到 Zotero File Storage，失败时回退为 PDF URL attachment。
+这个模式会自动创建 collection、导入文献 item、添加 PDF attachment，并回填 manifest、Obsidian 笔记、topic map 和 `wiki/log.md`。`--pdf-mode upload-file --fallback-url-attachment` 会尝试上传本地 PDF 到 Zotero File Storage，失败时回退为 PDF URL attachment。
 
 #### Fallback：本地 Zotero Connector
 

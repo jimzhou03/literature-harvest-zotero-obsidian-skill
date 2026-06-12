@@ -87,15 +87,25 @@ def request_json(
     if payload is not None:
         body = json.dumps(payload).encode("utf-8")
         merged_headers.setdefault("Content-Type", "application/json")
-    req = urllib.request.Request(url, data=body, method=method, headers=merged_headers)
-    try:
-        with urllib.request.urlopen(req, timeout=60) as response:
-            text = response.read().decode("utf-8", errors="replace")
-            parsed = json.loads(text) if text else None
-            return response.status, dict(response.headers.items()), parsed
-    except urllib.error.HTTPError as exc:
-        text = exc.read().decode("utf-8", errors="replace")
-        raise ZoteroWebError(f"{method} {url} failed: status={exc.code} body={text[:600]}") from exc
+    for attempt in range(3):
+        req = urllib.request.Request(url, data=body, method=method, headers=merged_headers)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                text = response.read().decode("utf-8", errors="replace")
+                parsed = json.loads(text) if text else None
+                return response.status, dict(response.headers.items()), parsed
+        except urllib.error.HTTPError as exc:
+            text = exc.read().decode("utf-8", errors="replace")
+            if exc.code in {429, 500, 502, 503, 504} and attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise ZoteroWebError(f"{method} {url} failed: status={exc.code} body={text[:600]}") from exc
+        except (TimeoutError, urllib.error.URLError) as exc:
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise ZoteroWebError(f"{method} {url} failed after retries: {exc}") from exc
+    raise ZoteroWebError(f"{method} {url} failed after retries.")
 
 
 def request_bytes(
@@ -105,14 +115,24 @@ def request_bytes(
     body: bytes,
     headers: dict[str, str],
 ) -> tuple[int, dict[str, str], str]:
-    req = urllib.request.Request(url, data=body, method=method, headers=api_headers(api_key, headers))
-    try:
-        with urllib.request.urlopen(req, timeout=120) as response:
-            text = response.read().decode("utf-8", errors="replace")
-            return response.status, dict(response.headers.items()), text
-    except urllib.error.HTTPError as exc:
-        text = exc.read().decode("utf-8", errors="replace")
-        raise ZoteroWebError(f"{method} {url} failed: status={exc.code} body={text[:600]}") from exc
+    for attempt in range(3):
+        req = urllib.request.Request(url, data=body, method=method, headers=api_headers(api_key, headers))
+        try:
+            with urllib.request.urlopen(req, timeout=120) as response:
+                text = response.read().decode("utf-8", errors="replace")
+                return response.status, dict(response.headers.items()), text
+        except urllib.error.HTTPError as exc:
+            text = exc.read().decode("utf-8", errors="replace")
+            if exc.code in {429, 500, 502, 503, 504} and attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise ZoteroWebError(f"{method} {url} failed: status={exc.code} body={text[:600]}") from exc
+        except (TimeoutError, urllib.error.URLError) as exc:
+            if attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise ZoteroWebError(f"{method} {url} failed after retries: {exc}") from exc
+    raise ZoteroWebError(f"{method} {url} failed after retries.")
 
 
 def derive_user_id(api_key: str) -> str:
@@ -353,6 +373,83 @@ def update_note(path: Path, item_key: str, collection_key: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def upsert_line_after(text: str, anchor: str, lines_to_insert: list[str]) -> str:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line == anchor:
+            return "\n".join(lines[: index + 1] + lines_to_insert + lines[index + 1 :]) + "\n"
+    return text
+
+
+def update_map(path: Path, manifest: dict[str, Any]) -> None:
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    collection = manifest.get("zotero_collection", "")
+    collection_key = manifest.get("zotero_collection_key", "")
+    attached = manifest.get("zotero_pdf_attached_count", 0)
+    mode = manifest.get("zotero_pdf_attachment_mode", "unknown")
+
+    text = re.sub(r"Zotero import status: `[^`]+`", "Zotero import status: `imported_via_web_api`", text)
+    stale_patterns = (
+        "当前 Zotero 选中 collection",
+        "本批次未导入",
+        "Zotero item key 当前为",
+        "Zotero item keys 已回填",
+        "Zotero collection:",
+        "PDF attachment mode:",
+    )
+    lines = [line for line in text.splitlines() if not any(pattern in line for pattern in stale_patterns)]
+    text = "\n".join(lines) + "\n"
+
+    status_line = "- Zotero import status: `imported_via_web_api`。"
+    if status_line in text:
+        text = upsert_line_after(
+            text,
+            status_line,
+            [
+                f"- Zotero collection: `{collection}` (`{collection_key}`)。",
+                f"- PDF attachment mode: `{mode}`，attached={attached}。",
+                "- Zotero item keys 已回填到各论文笔记。",
+            ],
+        )
+    path.write_text(text, encoding="utf-8")
+
+
+def update_log(path: Path, manifest: dict[str, Any]) -> None:
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    created = manifest.get("created") or time.strftime("%Y-%m-%d", time.gmtime())
+    items = manifest.get("items", [])
+    imported = manifest.get("zotero_imported_count", 0)
+    attached = manifest.get("zotero_pdf_attached_count", 0)
+    analysis = manifest.get("analysis_summary", {})
+    deep_read = analysis.get("pdf_assisted_deep_read", 0)
+    collection = manifest.get("zotero_collection", "")
+    collection_key = manifest.get("zotero_collection_key", "")
+    mode = manifest.get("zotero_pdf_attachment_mode", "unknown")
+    counts = (
+        f"- Counts: found={len(items)}, unique={len(items)}, imported={imported}, "
+        f"zotero_pending=0, pdf_attached={attached}, notes={len(items)}, "
+        f"pdf_assisted_deep_read={deep_read}, review_required={len(items)}"
+    )
+    notes = (
+        f"- Notes: Zotero Web API 已导入 collection `{collection}` (`{collection_key}`)；"
+        f"PDF 附件模式 `{mode}`；所有细节结论需要人工复核。"
+    )
+    heading_match = re.search(rf"^## {re.escape(created)} Literature Harvest: .*$", text, flags=re.MULTILINE)
+    if not heading_match:
+        return
+    next_heading = re.search(r"^## \d{4}-\d{2}-\d{2} ", text[heading_match.end() :], flags=re.MULTILINE)
+    end = heading_match.end() + next_heading.start() if next_heading else len(text)
+    block = text[heading_match.start() : end]
+    block = re.sub(r"^- Counts: .*$", counts, block, flags=re.MULTILINE)
+    block = re.sub(r"^- Notes: .*$", notes, block, flags=re.MULTILINE)
+    text = text[: heading_match.start()] + block + text[end:]
+    path.write_text(text, encoding="utf-8")
+
+
 def update_text_outputs(manifest_path: Path, manifest: dict[str, Any], args: argparse.Namespace) -> None:
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     note_root = rel_to_root(args.note_root) if args.note_root else None
@@ -364,11 +461,9 @@ def update_text_outputs(manifest_path: Path, manifest: dict[str, Any], args: arg
                 update_note(path, key, manifest.get("zotero_collection_key", ""))
     if args.map:
         map_path = rel_to_root(args.map)
-        if map_path.exists():
-            text = map_path.read_text(encoding="utf-8")
-            text = re.sub(r"Zotero import status: `[^`]+`", "Zotero import status: `imported_via_web_api`", text)
-            text = re.sub(r"Zotero item key 当前为 `TBD`.*", "Zotero item keys 已回填到各论文笔记。", text)
-            map_path.write_text(text, encoding="utf-8")
+        update_map(map_path, manifest)
+    if args.log:
+        update_log(rel_to_root(args.log), manifest)
 
 
 def main() -> int:
@@ -382,6 +477,7 @@ def main() -> int:
     parser.add_argument("--fallback-url-attachment", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--update", action="store_true", help="Update manifest and Obsidian notes after import.")
+    parser.add_argument("--log", default="wiki/log.md", help="Obsidian log path to update when --update is set.")
     args = parser.parse_args()
 
     api_key = os.environ.get("ZOTERO_API_KEY")
@@ -426,6 +522,9 @@ def main() -> int:
     manifest["zotero_collection"] = args.collection
     manifest["zotero_collection_key"] = collection_key
     manifest["zotero_imported_count"] = len(results)
+    manifest["zotero_pdf_attachment_mode"] = args.pdf_mode
+    manifest["zotero_pdf_attached_count"] = sum(1 for result in results if result.get("attachment_key"))
+    manifest["zotero_imported_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     if args.update:
         update_text_outputs(manifest_path, manifest, args)
     print(json.dumps({"collection_key": collection_key, "imported": len(results), "results": results}, ensure_ascii=False, indent=2))

@@ -60,7 +60,7 @@ python <skill-dir>/scripts/zotero_web_import.py \
 - Reuses matching existing items by exact normalized title or arXiv ID in `extra`.
 - Adds or keeps the target collection membership.
 - Adds PDF attachments idempotently.
-- Updates `manifest.json`, Obsidian notes, and the topic map when `--update` is set.
+- Updates `manifest.json`, Obsidian notes, the topic map, and `wiki/log.md` when `--update` is set.
 
 ## Fallback
 
