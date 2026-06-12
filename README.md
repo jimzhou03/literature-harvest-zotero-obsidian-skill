@@ -110,9 +110,32 @@ python -B C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\script
 
 一次性准备：创建一个有写权限的 Zotero API key，并在 Codex 运行环境中设置：
 
+获取 API key：
+
+1. 登录 Zotero 官网。
+2. 打开 [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys)。
+3. 点击 `Create new private key` 或类似按钮。
+4. 权限建议：
+   - 勾选个人库访问。
+   - 勾选写入权限 / write access。
+   - 如果只用个人库，不需要给 group 权限。
+5. 创建后复制 key。
+
+不要把 key 发到聊天里，也不要写进仓库、manifest、Obsidian 笔记或日志。
+
+临时设置，只对当前 PowerShell 窗口有效：
+
 ```powershell
-$env:ZOTERO_API_KEY = "<key>"
+$env:ZOTERO_API_KEY = "你的key"
 ```
+
+长期生效，写入当前 Windows 用户环境变量：
+
+```powershell
+[Environment]::SetEnvironmentVariable("ZOTERO_API_KEY", "你的key", "User")
+```
+
+设置长期变量后，重启 Codex 或新开 Codex 线程，让 Codex 进程能读到这个环境变量。
 
 然后让 Codex 执行：
 

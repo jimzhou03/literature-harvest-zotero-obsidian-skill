@@ -6,8 +6,29 @@ Use this path when the user wants end-to-end automation without manually creatin
 
 Create a Zotero API key with write access to the target library, then expose it to Codex as an environment variable:
 
+Where to get the key:
+
+1. Sign in to Zotero.
+2. Open [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys).
+3. Click `Create new private key` or the equivalent button.
+4. Recommended permissions:
+   - Enable personal library access.
+   - Enable write access.
+   - If only the personal library is needed, do not grant group-library access.
+5. Copy the generated key after creation.
+
+Do not paste the key into chat or write it into repository files, manifests, notes, or logs.
+
+Temporary current-window setup:
+
 ```powershell
-$env:ZOTERO_API_KEY = "<key>"
+$env:ZOTERO_API_KEY = "your-key"
+```
+
+Persistent Windows user setup:
+
+```powershell
+[Environment]::SetEnvironmentVariable("ZOTERO_API_KEY", "your-key", "User")
 ```
 
 Optional variables:

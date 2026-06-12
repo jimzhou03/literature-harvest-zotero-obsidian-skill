@@ -99,9 +99,32 @@ Path policy:
 
 One-time setup: create a Zotero API key with write access and expose it to Codex:
 
+Where to get the API key:
+
+1. Sign in to Zotero.
+2. Open [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys).
+3. Click `Create new private key` or the equivalent button.
+4. Recommended permissions:
+   - Enable personal library access.
+   - Enable write access.
+   - If you only use your personal library, do not grant group-library access.
+5. Copy the generated key after creation.
+
+Do not paste the key into chat. Do not write it into the repository, manifests, Obsidian notes, or logs.
+
+Temporary setup for the current PowerShell window only:
+
 ```powershell
-$env:ZOTERO_API_KEY = "<key>"
+$env:ZOTERO_API_KEY = "your-key"
 ```
+
+Persistent setup for the current Windows user:
+
+```powershell
+[Environment]::SetEnvironmentVariable("ZOTERO_API_KEY", "your-key", "User")
+```
+
+After setting the persistent variable, restart Codex or open a new Codex thread so the Codex process can read it.
 
 Then run:
 
