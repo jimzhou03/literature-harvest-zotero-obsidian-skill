@@ -36,7 +36,8 @@ Use this skill when the user asks Codex to:
 - `scripts/build_literature_plan.py`: deterministic query/source plan builder.
 - `scripts/harvest_arxiv.py`: arXiv MVP harvester that can query arXiv, filter candidates, download open PDFs, and generate BibTeX plus a manifest.
 - `scripts/extract_pdf_evidence.py`: PDF evidence extractor that writes `pdf-evidence.json` and `full_text/` for structured reading.
-- `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and updates the manifest, Obsidian notes, topic map, and `wiki/log.md`.
+- `scripts/generate_obsidian_analysis.py`: automated Obsidian analysis writer that consumes the manifest and PDF evidence, then writes structured paper notes, a topic review map, and `wiki/log.md`.
+- `scripts/zotero_web_import.py`: Zotero Web API importer that creates collections, imports items, adds PDF attachments, and writes Zotero item/collection keys back into the manifest and existing Obsidian outputs.
 - `scripts/zotero_preflight.py`: read-only Zotero selected-target guard before library writes.
 - `references/source-policy.md`: source routing, venue handling, and access/copyright boundaries.
 - `references/deep-reading-workflow.md`: reading-depth policy, single-paper dissection, topic synthesis, evidence constraints, and automated analysis confidence.
@@ -195,6 +196,20 @@ This is the evidence index for automated analysis. Codex should inspect the evid
 
 ## Obsidian Workflow
 
+After PDF evidence extraction, generate automated paper notes, the topic map, and the batch log:
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\generate_obsidian_analysis.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --evidence tmp\literature-harvest\<run>\pdf-evidence.json `
+  --note-root wiki\sources\论文阅读\<topic> `
+  --map "wiki\maps\<topic> Literature Map.md" `
+  --topic "<topic>" `
+  --years "2024-2026" `
+  --query "<original literature request>" `
+  --source-summary "arXiv official API + open PDFs"
+```
+
 Default output paths:
 
 ```text
@@ -240,6 +255,7 @@ Validated locally:
 - `build_literature_plan.py` runs and normalizes `EINLP` to `EMNLP`.
 - `harvest_arxiv.py --help` runs from the global Codex skill path.
 - `extract_pdf_evidence.py --help` runs and supports full-text evidence extraction for downloaded PDFs.
+- `generate_obsidian_analysis.py --help` runs and can generate Obsidian paper notes, a topic map, and a log from manifest plus PDF evidence.
 - `zotero_preflight.py --help` runs and provides a selected-target guard before import.
 - `zotero_web_import.py --help` runs; actual writes require `ZOTERO_API_KEY`.
 - Direct arXiv PDF download smoke test produced a valid `%PDF-` file.

@@ -138,6 +138,7 @@ def resolve_pdf_path(raw_path: str, manifest_path: Path) -> Path | None:
 
 
 def clean_text(value: str) -> str:
+    value = value.encode("utf-8", "replace").decode("utf-8")
     value = value.replace("\x00", " ")
     value = re.sub(r"[ \t]+", " ", value)
     value = re.sub(r"\n{3,}", "\n\n", value)

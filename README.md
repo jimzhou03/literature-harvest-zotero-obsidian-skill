@@ -37,7 +37,8 @@
 - `scripts/build_literature_plan.py`：根据关键词、会议、年份生成检索计划。
 - `scripts/harvest_arxiv.py`：arXiv MVP 抓取器，可以查询 arXiv、过滤候选、下载开放 PDF、生成 BibTeX 和 manifest。
 - `scripts/extract_pdf_evidence.py`：PDF 全文证据提取器，可生成 `pdf-evidence.json` 和 `full_text/`，供后续结构化阅读使用。
-- `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment、回填 manifest、Obsidian 笔记、topic map 和 `wiki/log.md`。
+- `scripts/generate_obsidian_analysis.py`：Obsidian 自动分析生成器，读取 manifest 和 PDF evidence，批量生成结构化单篇笔记、主题综述地图和 `wiki/log.md` 记录。
+- `scripts/zotero_web_import.py`：Zotero Web API 全自动导入器，可自动创建 collection、导入 items、挂 PDF attachment，并把 Zotero item key / collection key 回填到 manifest 和既有 Obsidian 输出。
 - `scripts/zotero_preflight.py`：Zotero 写入前的只读目标检查器，防止导入到错误 collection。
 - `references/source-policy.md`：定义各类来源的优先级、会议处理策略和版权/访问边界。
 - `references/deep-reading-workflow.md`：定义阅读深度、单篇拆解、主题综述、证据约束和自动分析置信度。
@@ -205,6 +206,20 @@ python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\e
 
 ### 5. 写入 Obsidian
 
+完成 PDF 证据提取后，用自动分析生成器批量写入单篇笔记、主题地图和日志：
+
+```powershell
+python C:\Users\<you>\.codex\skills\literature-harvest-zotero-obsidian\scripts\generate_obsidian_analysis.py `
+  --manifest tmp\literature-harvest\<run>\manifest.json `
+  --evidence tmp\literature-harvest\<run>\pdf-evidence.json `
+  --note-root wiki\sources\论文阅读\<topic> `
+  --map "wiki\maps\<topic> Literature Map.md" `
+  --topic "<topic>" `
+  --years "2024-2026" `
+  --query "<原始检索需求>" `
+  --source-summary "arXiv official API + open PDFs"
+```
+
 默认写入结构：
 
 ```text
@@ -256,6 +271,7 @@ review_gate: none
 - `build_literature_plan.py` 可以运行，并能把 `EINLP` 归一化为 `EMNLP`。
 - `harvest_arxiv.py --help` 可以从全局 Codex skill 路径正常调用。
 - `extract_pdf_evidence.py --help` 可以运行，用于对已下载 PDF 提取全文证据。
+- `generate_obsidian_analysis.py --help` 可以运行，用于把 manifest + PDF evidence 自动生成 Obsidian 单篇笔记、主题地图和日志。
 - `zotero_preflight.py --help` 可以运行，用于导入前检查 selected collection。
 - `zotero_web_import.py --help` 可以运行；实际写入需要 `ZOTERO_API_KEY`。
 - 直接下载 arXiv PDF 的 smoke test 成功，文件头为 `%PDF-`。

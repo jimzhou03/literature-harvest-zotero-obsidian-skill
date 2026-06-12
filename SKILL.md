@@ -49,6 +49,12 @@ After PDFs are available, extract full-text evidence before writing final notes:
 python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-harvest/rag-kg/manifest.json --write-text --update
 ```
 
+Then generate automated Obsidian analysis from the manifest and evidence:
+
+```bash
+python <skill-dir>/scripts/generate_obsidian_analysis.py --manifest tmp/literature-harvest/rag-kg/manifest.json --evidence tmp/literature-harvest/rag-kg/pdf-evidence.json --note-root wiki/sources/论文阅读/rag-kg --map "wiki/maps/rag-kg Literature Map.md" --topic "RAG and KG" --query "RAG and KG recent papers" --source-summary "arXiv official API + open PDFs"
+```
+
 ## Workflow
 
 1. Parse scope.
@@ -99,6 +105,7 @@ python <skill-dir>/scripts/extract_pdf_evidence.py --manifest tmp/literature-har
 
 8. Write Obsidian outputs.
    - Read `references/obsidian-output.md` before writing notes.
+   - Prefer `scripts/generate_obsidian_analysis.py --manifest <manifest> --evidence <pdf-evidence.json> --note-root <note-root> --map <map> --topic <topic>` for automated batch note/map/log generation.
    - Default note root: `wiki/sources/论文阅读/<topic-slug>/`.
    - Create or update a map page in `wiki/maps/` for the topic.
    - The map must include method taxonomy, tool/dataset/code matrix, trend timeline, paper-to-paper relationships, research gaps, and a recommended reading order.
