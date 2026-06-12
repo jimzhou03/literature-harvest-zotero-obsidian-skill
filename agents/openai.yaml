@@ -1,0 +1,4 @@
+interface:
+  display_name: "Literature Harvest to Zotero and Obsidian"
+  short_description: "Harvest papers into Zotero and Obsidian"
+  default_prompt: "Use $literature-harvest-zotero-obsidian to fetch recent RAG and KG papers into Zotero and write analysis notes to Obsidian."
